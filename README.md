@@ -116,6 +116,11 @@ refuses to activate the component and to issue claims without live grants.
 The in-process `grant.Check` at every emission keeps the fail-closed shape
 against code drift; it is not the issuance gate.
 
+Co-install prerequisite: v0.1.2 re-declares core-owned kinds shared with the
+tempo collector, so `install` and `enable` need a host with grant-aware
+sharing (eshu-hq/eshu with the grant-sharing change for eshu-hq/eshu#9202);
+on an older host the second install fails closed with a fact-kind collision.
+
 ### Trust mode
 
 The release signs the image digest keyless with cosign, but it does a plain
