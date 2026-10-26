@@ -11,10 +11,10 @@ import (
 )
 
 // TestManifestMatchesTheCodeContract proves manifest.yaml and Contract() name
-// the same manifest-owned kind with the same schema versions, source
-// confidence, and payload schema reference, so a manifest edit cannot drift
-// from the narrowed ownership (eshu-hq/eshu#9202: only observed_log_signal is
-// manifest-owned; shared-kind emission stays grant-authorized).
+// the same four manifest-owned kinds in the same order, with the same
+// schema versions, source confidence, and payload schema reference, so a
+// manifest edit cannot drift from the full emission (eshu-hq/eshu#9202
+// satellite release v0.1.2).
 func TestManifestMatchesTheCodeContract(t *testing.T) {
 	t.Parallel()
 

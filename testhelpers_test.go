@@ -146,29 +146,6 @@ func loadManifest(t *testing.T) conformance.Manifest {
 	return manifest
 }
 
-// scopeResultToManifest returns a copy of result holding only facts whose
-// kind the manifest owns. The handler still emits grant-authorized shared
-// kinds (source_instance, observed_rule, coverage_warning) at the emission
-// edge, but conformance validates fixtures against the narrowed manifest
-// Contract (eshu-hq/eshu#9202 arbiter verdict: only observed_log_signal is
-// manifest-owned, so a co-installed tempo collector no longer collides at
-// install). Shared-kind shapes are unchanged, proven by the untouched loki
-// emission unit tests plus live QA re-proof, not by this scoped fixture.
-func scopeResultToManifest(result sdk.Result, manifest conformance.Manifest) sdk.Result {
-	owned := make(map[string]struct{}, len(manifest.Spec.EmittedFacts))
-	for _, family := range manifest.Spec.EmittedFacts {
-		owned[family.Kind] = struct{}{}
-	}
-	kept := result.Facts[:0:0]
-	for _, fact := range result.Facts {
-		if _, ok := owned[fact.Kind]; ok {
-			kept = append(kept, fact)
-		}
-	}
-	result.Facts = kept
-	return result
-}
-
 // mustFixtureResult runs the synthetic target through the handler and fails
 // the test unless the result is usable.
 func mustFixtureResult(t *testing.T) sdk.Result {

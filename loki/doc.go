@@ -5,10 +5,9 @@
 // facts for the collector-sdk/v1alpha1 wire contract.
 //
 // The package reads configured Loki API targets and emits metadata-only
-// observability facts: observability.observed_log_signal is the manifest-owned
-// kind (eshu-hq/eshu#9202), while observability.source_instance,
-// observability.observed_rule, and observability.coverage_warning stay
-// grant-authorized at the emission edge. It never persists log lines, raw
+// observability facts: the manifest owns all four kinds (eshu-hq/eshu#9202
+// satellite release v0.1.2), and the emission edge checks the core-issued
+// producer grant before any provider contact. It never persists log lines, raw
 // LogQL, label values, tenant IDs, tenant headers, credentials, or provider
 // response bodies. Core owns admission,
 // projection, persistence, claim mutation, fencing, and declared/applied/

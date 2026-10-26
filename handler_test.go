@@ -19,11 +19,9 @@ import (
 
 // TestHandleServesACompleteResult proves one claim against the stub target
 // returns every manifest-owned kind, echoes the claim, and passes the
-// published SDK validator on the manifest-scoped facts. The handler still
-// emits grant-authorized shared kinds at the emission edge, but Contract is
-// the narrowed manifest ownership (eshu-hq/eshu#9202), so validation runs on
-// the scoped copy; shared-kind shapes stay proven by the untouched loki
-// emission unit tests plus live QA re-proof.
+// published SDK validator on the unfiltered handler result. The full
+// four-kind emission (eshu-hq/eshu#9202 satellite release v0.1.2) is
+// validated as emitted; live re-proof stays pending (NOT_CHECKED here).
 func TestHandleServesACompleteResult(t *testing.T) {
 	t.Parallel()
 
@@ -48,13 +46,12 @@ func TestHandleServesACompleteResult(t *testing.T) {
 	if summary.FreshnessHint == "" || summary.ResultBytes == 0 {
 		t.Errorf("summary = %+v, want freshness and byte size", summary)
 	}
-	scoped := scopeResultToManifest(result, loadManifest(t))
-	report, err := sdk.NewValidator(Contract()).ValidateResult(scoped)
+	report, err := sdk.NewValidator(Contract()).ValidateResult(result)
 	if err != nil {
-		t.Fatalf("ValidateResult(scoped) error = %v, want validator-clean output", err)
+		t.Fatalf("ValidateResult(result) error = %v, want validator-clean output", err)
 	}
-	if report.FactCount != len(scoped.Facts) {
-		t.Errorf("report fact count = %d, want %d", report.FactCount, len(scoped.Facts))
+	if report.FactCount != len(result.Facts) {
+		t.Errorf("report fact count = %d, want %d", report.FactCount, len(result.Facts))
 	}
 }
 
