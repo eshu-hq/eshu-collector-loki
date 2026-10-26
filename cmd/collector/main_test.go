@@ -20,24 +20,54 @@ import (
 	collector "github.com/eshu-hq/eshu-collector-loki"
 )
 
-// lokiStub serves a minimal Loki target: no labels, no series, no rules, so
-// the claim completes with only the source-instance fact.
+// lokiStub serves a minimal Loki target: one label (so the run yields an
+// observed_log_signal fact the narrowed manifest owns), no series, no rules.
+// The handler still emits the grant-authorized source-instance fact
+// alongside it; contract validation below runs on the manifest-scoped copy.
 func lokiStub(t *testing.T) *httptest.Server {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/loki/api/v1/labels", "/loki/api/v1/series":
+		switch {
+		case r.URL.Path == "/loki/api/v1/labels":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status":"success","data":["app"]}`))
+		case r.URL.Path == "/loki/api/v1/series":
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"success","data":[]}`))
-		case "/loki/api/v1/rules":
+		case r.URL.Path == "/loki/api/v1/rules":
 			w.Header().Set("Content-Type", "application/yaml")
 			_, _ = w.Write([]byte(`{}`))
+		case strings.HasPrefix(r.URL.Path, "/loki/api/v1/label/") && strings.HasSuffix(r.URL.Path, "/values"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status":"success","data":[]}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	t.Cleanup(server.Close)
 	return server
+}
+
+// scopeToManifest returns a copy of result holding only facts whose kind the
+// narrowed manifest owns (observability.observed_log_signal per
+// eshu-hq/eshu#9202). The handler still emits grant-authorized shared kinds
+// at the emission edge, but the manifest Contract declares only the owned
+// kind, so SDK validation runs on this scoped copy. Shared-kind shapes are
+// unchanged, proven by the untouched loki emission unit tests plus live QA
+// re-proof.
+func scopeToManifest(result sdk.Result) sdk.Result {
+	owned := make(map[string]struct{}, len(collector.Contract().Facts))
+	for _, declaration := range collector.Contract().Facts {
+		owned[declaration.Kind] = struct{}{}
+	}
+	kept := make([]sdk.Fact, 0, len(result.Facts))
+	for _, fact := range result.Facts {
+		if _, ok := owned[fact.Kind]; ok {
+			kept = append(kept, fact)
+		}
+	}
+	result.Facts = kept
+	return result
 }
 
 func requestJSON(t *testing.T, baseURL string) []byte {
@@ -78,7 +108,9 @@ func testDeps() deps {
 
 // TestRunServesOneRequestAsOneResult proves the stdin/stdout contract end to
 // end through the command: one Request in, one valid Result out, health on
-// standard error without the URL.
+// standard error without the URL. The stub yields an observed_log_signal
+// fact; the manifest-scoped copy carries exactly that owned kind and passes
+// SDK validation (see scopeToManifest).
 func TestRunServesOneRequestAsOneResult(t *testing.T) {
 	t.Parallel()
 
@@ -95,11 +127,24 @@ func TestRunServesOneRequestAsOneResult(t *testing.T) {
 		if err := decoder.Decode(&result); err != nil {
 			t.Fatalf("decode result: %v", err)
 		}
-		if result.State != sdk.ResultComplete || len(result.Facts) != 1 || result.Facts[0].Kind != "observability.source_instance" {
-			t.Fatalf("result = state %q facts %d, want complete with one observability.source_instance", result.State, len(result.Facts))
+		if result.State != sdk.ResultComplete {
+			t.Fatalf("result state = %q, want complete", result.State)
 		}
-		if _, err := sdk.NewValidator(collector.Contract()).ValidateResult(result); err != nil {
-			t.Fatalf("result fails SDK validation: %v", err)
+		foundOwned := false
+		for _, fact := range result.Facts {
+			if fact.Kind == "observability.observed_log_signal" {
+				foundOwned = true
+			}
+		}
+		if !foundOwned {
+			t.Fatalf("result facts %v, want an observability.observed_log_signal fact", result.Facts)
+		}
+		scoped := scopeToManifest(result)
+		if len(scoped.Facts) != 1 || scoped.Facts[0].Kind != "observability.observed_log_signal" {
+			t.Fatalf("scoped result = %v, want one observability.observed_log_signal", scoped.Facts)
+		}
+		if _, err := sdk.NewValidator(collector.Contract()).ValidateResult(scoped); err != nil {
+			t.Fatalf("scoped result fails SDK validation: %v", err)
 		}
 		if !strings.Contains(stderr.String(), "collector health:") {
 			t.Fatalf("stderr = %q, want a health line", stderr.String())

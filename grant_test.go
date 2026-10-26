@@ -10,6 +10,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/eshu-hq/eshu-collector-loki/grant"
 )
 
 // producerGrant is the shape `eshu component grant` records. The core issues
@@ -25,15 +27,21 @@ type producerGrant struct {
 }
 
 // TestGrantExampleCoversEveryCoreKindAndNothingElse proves grant.example.json
-// is exactly the set of producer grants the manifest needs.
+// is a superset of the producer grants the manifest needs.
 //
-// Every kind this collector emits is core-owned, so the host refuses to
-// activate the component without a live grant for each one. A grant's scope is
-// a collector kind declared by the manifest, not a scope ID: the host matches
-// it against spec.collectorKinds. The observability kinds are shared with the
-// grafana, prometheus-mimir, and tempo collectors for their own providers; the
-// producer identity plus scope is what separates authorities, not the kind
-// names (see the grant package).
+// The manifest owns only the registry-scoped unique kind
+// (observability.observed_log_signal) since the eshu-hq/eshu#9202 arbiter
+// verdict: source_instance, observed_rule, and coverage_warning stay
+// grant-authorized at the emission edge but are not manifest-owned, so a
+// co-installed collector (tempo) no longer collides at install. The grants
+// must therefore cover every manifest kind, while extra grant-covered shared
+// kinds are allowed by design. Every grant kind must still sit inside
+// grant.CoveredKinds: nothing outside the emission-edge coverage is allowed.
+// A grant's scope is a collector kind declared by the manifest, not a scope
+// ID: the host matches it against spec.collectorKinds. The observability
+// kinds are shared with the grafana, prometheus-mimir, and tempo collectors
+// for their own providers; the producer identity plus scope is what separates
+// authorities, not the kind names (see the grant package).
 func TestGrantExampleCoversEveryCoreKindAndNothingElse(t *testing.T) {
 	t.Parallel()
 
@@ -46,32 +54,43 @@ func TestGrantExampleCoversEveryCoreKindAndNothingElse(t *testing.T) {
 		t.Fatalf("json.Unmarshal(grant.example.json) error = %v", err)
 	}
 	manifest := loadManifest(t)
+	manifestVersions := make(map[string][]string, len(manifest.Spec.EmittedFacts))
+	for _, family := range manifest.Spec.EmittedFacts {
+		manifestVersions[family.Kind] = family.SchemaVersions
+	}
+	covered := grant.CoveredKinds()
 	var kinds []string
-	for _, grant := range grants {
-		kinds = append(kinds, grant.Kind)
-		if grant.ProducerID != manifest.Metadata.ID || grant.Version != manifest.Metadata.Version {
-			t.Errorf("grant %s names %s@%s, want %s@%s", grant.Kind, grant.ProducerID, grant.Version, manifest.Metadata.ID, manifest.Metadata.Version)
+	for _, example := range grants {
+		kinds = append(kinds, example.Kind)
+		if example.ProducerID != manifest.Metadata.ID || example.Version != manifest.Metadata.Version {
+			t.Errorf("grant %s names %s@%s, want %s@%s", example.Kind, example.ProducerID, example.Version, manifest.Metadata.ID, manifest.Metadata.Version)
 		}
-		if !slices.Contains(manifest.Spec.CollectorKinds, grant.Scope) {
-			t.Errorf("grant %s scope %q is not a collector kind in the manifest %v", grant.Kind, grant.Scope, manifest.Spec.CollectorKinds)
+		if !slices.Contains(manifest.Spec.CollectorKinds, example.Scope) {
+			t.Errorf("grant %s scope %q is not a collector kind in the manifest %v", example.Kind, example.Scope, manifest.Spec.CollectorKinds)
 		}
-		if grant.Revoked || grant.ExpiresAt.IsZero() {
-			t.Errorf("grant %s is revoked or has no expiry: %+v", grant.Kind, grant)
+		if example.Revoked || example.ExpiresAt.IsZero() {
+			t.Errorf("grant %s is revoked or has no expiry: %+v", example.Kind, example)
 		}
-		var declared []string
-		for _, family := range manifest.Spec.EmittedFacts {
-			if family.Kind == grant.Kind {
-				declared = family.SchemaVersions
+		if !slices.Contains(covered, example.Kind) {
+			t.Errorf("grant %s is outside the emission-edge coverage %v", example.Kind, covered)
+		}
+		if declared, owned := manifestVersions[example.Kind]; owned {
+			if !slices.Equal(example.SchemaVersions, declared) {
+				t.Errorf("grant %s versions %v, want the manifest's %v", example.Kind, example.SchemaVersions, declared)
 			}
+		} else if !slices.Equal(example.SchemaVersions, []string{grant.SchemaVersionV1}) {
+			t.Errorf("grant %s versions %v, want the locked grant coverage [%s]", example.Kind, example.SchemaVersions, grant.SchemaVersionV1)
 		}
-		if !slices.Equal(grant.SchemaVersions, declared) {
-			t.Errorf("grant %s versions %v, want the manifest's %v", grant.Kind, grant.SchemaVersions, declared)
+	}
+	for kind := range manifestVersions {
+		if !slices.Contains(kinds, kind) {
+			t.Errorf("manifest kind %s has no grant; grants must cover every manifest kind", kind)
 		}
 	}
 	sort.Strings(kinds)
-	want := append([]string(nil), FactKinds()...)
-	sort.Strings(want)
-	if !slices.Equal(kinds, want) {
-		t.Errorf("grant kinds %v, want exactly the emitted kinds %v", kinds, want)
+	sortedCovered := append([]string(nil), covered...)
+	sort.Strings(sortedCovered)
+	if !slices.Equal(kinds, sortedCovered) {
+		t.Errorf("grant kinds %v, want the emission-edge coverage %v", kinds, sortedCovered)
 	}
 }

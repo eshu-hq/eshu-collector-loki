@@ -11,9 +11,10 @@ import (
 )
 
 // TestManifestMatchesTheCodeContract proves manifest.yaml and Contract() name
-// the same six core fact kinds with the same schema versions, source
+// the same manifest-owned kind with the same schema versions, source
 // confidence, and payload schema reference, so a manifest edit cannot drift
-// from what the handler emits.
+// from the narrowed ownership (eshu-hq/eshu#9202: only observed_log_signal is
+// manifest-owned; shared-kind emission stays grant-authorized).
 func TestManifestMatchesTheCodeContract(t *testing.T) {
 	t.Parallel()
 
