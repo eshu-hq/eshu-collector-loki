@@ -1,0 +1,47 @@
+# Activation config for one Loki API target. The Eshu component-extension
+# host reads this file; `host` and `process` configure the host, and everything
+# under `config` reaches the collector as the Request config.
+#
+# Every host and identifier below is a placeholder. The token and tenant ID
+# are never written here: `token_env` and `tenant_id_env` name the environment
+# variables the collector process reads them from. Loki needs no credential
+# against the in-cluster gateway; keep the env references only when the target
+# requires them.
+host:
+  sourceSystem: loki
+  scope:
+    id: loki:tenant:example
+    kind: log_source
+process:
+  command: /usr/local/bin/collector
+  args: ["--sdk-stdio"]
+  # The host kills this process at the claim deadline, which is the initial
+  # worker lease expiry (ESHU component collector claim TTL, 5m in the
+  # reference deployment; heartbeats do not extend it). The collector stops
+  # min(2s, 5% of the remaining time) earlier and returns a retryable result
+  # of its own instead of being killed mid-request.
+  # Raise this together with config.limits.max_result_bytes if a large target
+  # needs more than the 4 MiB default result.
+  stdout_limit_bytes: 4194304
+config:
+  # Exactly the in-tree collector's target keys (go/cmd/collector-loki in
+  # eshu-hq/eshu). A claim for any other scope fails; the collector serves
+  # every enabled target in this list.
+  targets:
+    - scope_id: loki:tenant:example
+      instance_id: example
+      base_url: http://monitoring-loki-gateway.monitoring.svc.cluster.local
+      # path_prefix: /loki
+      # token_env: LOKI_TOKEN
+      # tenant_id: example-tenant
+      # tenant_id_env: LOKI_TENANT_ID
+      resource_limit: 50
+      # label_value_names: [__name__]
+      # max_label_values_per_label: 100
+      # series_matchers: ['{job="example"}']
+      # series_lookback: 24h
+      stale_after: 24h
+      enabled: true
+  limits:
+    # Fail terminal with result_too_large above this many encoded bytes.
+    max_result_bytes: 3500000

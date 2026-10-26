@@ -1,0 +1,148 @@
+name: release
+
+# Publishes the collector image when a version tag is pushed. Nothing runs on a
+# pull request or a branch push, and nothing here deploys. A person copies the
+# digest from the job summary into the activation's seed.image (README,
+# "Releasing").
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      TAG_NAME: ${{ github.ref_name }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Require a semantic version tag
+        run: |
+          if ! printf '%s' "${TAG_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "tag '${TAG_NAME}' is not vMAJOR.MINOR.PATCH[-prerelease]" >&2
+            exit 1
+          fi
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+      - name: Require the tag to match the manifest version
+        run: |
+          version="$(awk '
+            /^metadata:/ { in_metadata = 1; next }
+            /^[^[:space:]#]/ { in_metadata = 0 }
+            in_metadata && /^  version:/ { print $2; exit }
+          ' manifest.yaml | tr -d "\"'\r")"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "manifest.yaml metadata.version is not MAJOR.MINOR.PATCH[-prerelease]" >&2
+            exit 1
+          fi
+          matches=false
+          if [[ "${TAG_NAME}" == "v${version}" ]]; then
+            matches=true
+          fi
+          if [[ "${version}" != *-* && "${TAG_NAME}" == "v${version}-"* ]]; then
+            matches=true
+          fi
+          if [[ "${matches}" != true ]]; then
+            echo "tag '${TAG_NAME}' does not match manifest.yaml metadata.version 'v${version}'" >&2
+            exit 1
+          fi
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - name: Log in to the container registry
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+      - name: Build and push the image
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Record the image digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "## Image"
+            echo
+            echo "- Tag: \`${REGISTRY}/${IMAGE_NAME}:${TAG_NAME}\`"
+            echo "- Digest: \`${DIGEST}\`"
+            echo "- Reference: \`${REGISTRY}/${IMAGE_NAME}@${DIGEST}\`"
+            echo
+            echo "Copy the reference into the activation's seed.image."
+          } >> "${GITHUB_STEP_SUMMARY}"
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: Install cosign
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+      - name: Sign the image
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "${IMAGE_REF}"
+      - name: Verify the image signature
+        env:
+          CERTIFICATE_IDENTITY: https://github.com/${{ github.workflow_ref }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: |
+          cosign verify "${IMAGE_REF}" \
+            --certificate-identity "${CERTIFICATE_IDENTITY}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+      - name: Generate the image SBOM
+        uses: anchore/sbom-action@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.20.0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: eshu-collector-loki.spdx.json
+          upload-artifact: true
+          upload-release-assets: false
+      - name: Generate the SBOM attestation
+        uses: actions/attest@c32b4b8b198b65d0bd9d63490e847ff7b53989d4 # v4.0.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: eshu-collector-loki.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Verify the image attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OCI_IMAGE_REF: oci://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: |
+          gh attestation verify "${OCI_IMAGE_REF}" \
+            -R "${GITHUB_REPOSITORY}"
+          gh attestation verify "${OCI_IMAGE_REF}" \
+            -R "${GITHUB_REPOSITORY}" \
+            --predicate-type https://spdx.dev/Document/v2.3
