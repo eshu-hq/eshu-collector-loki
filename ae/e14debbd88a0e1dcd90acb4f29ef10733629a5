@@ -1,0 +1,14 @@
+grant/grant_test.go
+  h_78a442cba0b3e6 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aee14debbd88a0e1dcd90acb4f29ef10733629a5",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
