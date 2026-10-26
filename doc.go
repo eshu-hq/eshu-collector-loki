@@ -8,11 +8,13 @@
 // The host writes one bounded collector-sdk/v1alpha1 Request to the process's
 // standard input and reads one collector-sdk/v1alpha1 Result from its standard
 // output. The package turns that Request into bounded Loki REST reads and the
-// Result into the observability fact kinds the Eshu core already owns:
-// observability.source_instance, observability.observed_log_signal,
-// observability.observed_rule, and observability.coverage_warning. The host
-// builds the durable envelope, validates the Result, and owns claims, leases,
-// and commits.
+// Result into observability facts. The manifest owns only
+// observability.observed_log_signal (eshu-hq/eshu#9202 arbiter verdict, so a
+// co-installed tempo collector no longer collides at install);
+// observability.source_instance, observability.observed_rule, and
+// observability.coverage_warning stay grant-authorized at the emission edge
+// but are not manifest-owned. The host builds the durable envelope,
+// validates the Result, and owns claims, leases, and commits.
 //
 // The producer never persists log lines, raw LogQL, label values, tenant IDs,
 // tenant headers, credentials, or provider response bodies. Provider failures

@@ -30,14 +30,13 @@ const (
 	MetricsPrefix = "eshu_dp_loki_collector_"
 )
 
-// FactKinds returns the core fact kinds this collector emits, in manifest
-// order. Every kind is core-owned and needs a producer grant on the host.
+// FactKinds returns the fact kinds this collector manifest-owns, in manifest
+// order: only the registry-scoped unique kind (arbiter verdict
+// eshu-hq/eshu#9202). Shared-kind emission stays grant-authorized at the
+// emission edge via grant.CoveredKinds, not manifest-owned.
 func FactKinds() []string {
 	return []string{
-		loki.KindSourceInstance,
 		loki.KindObservedLogSignal,
-		loki.KindObservedRule,
-		loki.KindCoverageWarning,
 	}
 }
 
