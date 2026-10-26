@@ -1,0 +1,47 @@
+apiVersion: eshu.dev/v1alpha1
+kind: ComponentPackage
+metadata:
+  id: dev.eshu.collector.loki
+  name: Loki collector
+  publisher: eshu-hq
+  version: 0.1.0
+spec:
+  compatibleCore: ">=0.0.5 <0.2.0"
+  componentType: collector
+  collectorKinds:
+    - loki
+  runtime:
+    sdkProtocol: collector-sdk/v1alpha1
+    adapter: process
+  artifacts:
+    - platform: linux/amd64
+      image: ghcr.io/eshu-hq/eshu-collector-loki@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  emittedFacts:
+    - kind: observability.source_instance
+      payloadSchemaRef: observability.source_instance
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: observability.observed_log_signal
+      payloadSchemaRef: observability.observed_log_signal
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: observability.observed_rule
+      payloadSchemaRef: observability.observed_rule
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: observability.coverage_warning
+      payloadSchemaRef: observability.coverage_warning
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+  telemetry:
+    # Declared only: the collector emits no metric under this prefix. See the
+    # README section "Operator signals".
+    metricsPrefix: eshu_dp_loki_collector_
