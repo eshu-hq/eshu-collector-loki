@@ -37,8 +37,8 @@ func TestCheckAcceptsDraftShapedGrant(t *testing.T) {
 func TestCheckFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now().UTC()
 	good := draftGrant()
+	now := good.IssuedAt
 	tests := []struct {
 		name   string
 		mutate func(*Grant)
