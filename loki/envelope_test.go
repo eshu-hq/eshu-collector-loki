@@ -12,7 +12,7 @@ import (
 	"github.com/eshu-hq/eshu-sdk/collector"
 )
 
-func TestObservedLogSignalEnvelopeRedactsLabelValuesAndQueries(t *testing.T) {
+func TestObservedLogSignalEnvelopePreservesHashedLabelValuesAndDropsQueries(t *testing.T) {
 	t.Parallel()
 
 	ctx := testEnvelopeContext()
@@ -121,6 +121,43 @@ func TestCoverageWarningEnvelopeUsesTruncatedReason(t *testing.T) {
 	assertObservabilityFact(t, env, KindCoverageWarning)
 	assertPayload(t, env, "warning_kind", WarningTruncated)
 	assertPayload(t, env, "resource_class", ResourceClassLogSignal)
+	assertPayload(t, env, "outcome", OutcomePartial)
+	assertPayload(t, env, "freshness_state", FreshnessUnknown)
+}
+
+func TestCoverageWarningEnvelopeOutcomeAndFreshness(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		reason        string
+		wantOutcome   string
+		wantFreshness string
+	}{
+		{WarningTruncated, OutcomePartial, FreshnessUnknown},
+		{WarningPartial, OutcomePartial, FreshnessUnknown},
+		{WarningRateLimited, OutcomePartial, FreshnessUnknown},
+		{WarningStale, OutcomeStale, FreshnessStale},
+		{WarningPermissionHidden, OutcomePermissionHidden, FreshnessPermissionHidden},
+		{WarningHighCardinality, OutcomeRejected, FreshnessUnknown},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.reason, func(t *testing.T) {
+			t.Parallel()
+
+			env, err := NewCoverageWarningEnvelope(testEnvelopeContext(), Warning{
+				ResourceClass: ResourceClassLogSignal,
+				Reason:        tc.reason,
+			})
+			if err != nil {
+				t.Fatalf("NewCoverageWarningEnvelope(%q) error = %v, want nil", tc.reason, err)
+			}
+
+			assertPayload(t, env, "warning_kind", tc.reason)
+			assertPayload(t, env, "outcome", tc.wantOutcome)
+			assertPayload(t, env, "freshness_state", tc.wantFreshness)
+		})
+	}
 }
 
 func testEnvelopeContext() EnvelopeContext {
@@ -128,7 +165,6 @@ func testEnvelopeContext() EnvelopeContext {
 		ScopeID:             "loki:tenant:prod",
 		GenerationID:        "generation-2026-06-01T12:00:00Z",
 		CollectorInstanceID: "collector-loki-prod",
-		FencingToken:        42,
 		ObservedAt:          time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
 		SourceURI:           "https://loki.example.test",
 		SourceInstanceID:    "loki-prod",

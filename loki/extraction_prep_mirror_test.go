@@ -30,7 +30,6 @@ func extractionPrepContext() EnvelopeContext {
 		ScopeID:             "loki:tenant:prod",
 		GenerationID:        "loki:generation-7",
 		CollectorInstanceID: "collector-loki",
-		FencingToken:        7,
 		ObservedAt:          time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC),
 		SourceURI:           "https://loki.example.test",
 		SourceInstanceID:    "loki-prod",

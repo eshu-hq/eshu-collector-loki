@@ -119,15 +119,14 @@ const (
 )
 
 // EnvelopeContext carries durable fact-envelope identity for Loki facts.
-// FencingToken is host-set from claim.fencing_token at cutover (the host
-// enforces fencing; this repo only carries the value). SourceURI carries
-// the target base URL because the collector-sdk Fact wire shape requires
-// source_ref.uri; the in-tree envelope has no URI counterpart.
+// Fencing stays host-enforced from claim.fencing_token at cutover: there is
+// intentionally no fencing counterpart in this emission half.
+// SourceURI carries the target base URL because the collector-sdk Fact wire
+// shape requires source_ref.uri; the in-tree envelope has no URI counterpart.
 type EnvelopeContext struct {
 	ScopeID             string
 	GenerationID        string
 	CollectorInstanceID string
-	FencingToken        int64
 	ObservedAt          time.Time
 	SourceURI           string
 	SourceInstanceID    string
