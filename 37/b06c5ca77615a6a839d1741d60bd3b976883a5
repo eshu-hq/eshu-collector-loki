@@ -1,0 +1,17 @@
+loki/client.go
+  h_78a442cba0b3e6 377-380,382-393,410,429-448,458-462
+loki/rules_502_test.go
+  h_78a442cba0b3e6 1-179,274-317
+  h_78a442cba0b3e6 180-273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37b06c5ca77615a6a839d1741d60bd3b976883a5",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
