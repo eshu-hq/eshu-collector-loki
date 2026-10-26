@@ -1,0 +1,86 @@
+.github/workflows/ci.yml
+  h_78a442cba0b3e6 5-10,13-33,36-37,40-79
+.github/workflows/release.yml
+  h_78a442cba0b3e6 1-148
+CODEOWNERS
+  h_78a442cba0b3e6 1
+Dockerfile
+  h_78a442cba0b3e6 1-24
+LICENSE
+  h_78a442cba0b3e6 1-21
+README.md
+  h_78a442cba0b3e6 3-6,16-18,37-262,265-274,281-282,363-368
+boundary_test.go
+  h_78a442cba0b3e6 1-250
+ci_workflow_test.go
+  h_78a442cba0b3e6 1-37
+cmd/collector/main.go
+  h_78a442cba0b3e6 1-104
+cmd/collector/main_test.go
+  h_78a442cba0b3e6 1-330
+cmd/collector/seed.go
+  h_78a442cba0b3e6 1-200
+cmd/collector/seed_image_ref_test.go
+  h_78a442cba0b3e6 1-251
+collector.go
+  h_78a442cba0b3e6 1-81
+compatibility_test.go
+  h_78a442cba0b3e6 1-181
+config.example.yaml
+  h_78a442cba0b3e6 1-47
+config.go
+  h_78a442cba0b3e6 1-262
+config_example_test.go
+  h_78a442cba0b3e6 1-59
+config_test.go
+  h_78a442cba0b3e6 1-188
+doc.go
+  h_78a442cba0b3e6 1-32
+grant.example.json
+  h_78a442cba0b3e6 1-6
+grant_test.go
+  h_78a442cba0b3e6 1-77
+handler.go
+  h_78a442cba0b3e6 1-220
+handler_extra_test.go
+  h_78a442cba0b3e6 1-94
+handler_test.go
+  h_78a442cba0b3e6 1-180
+health.go
+  h_78a442cba0b3e6 1-110
+health_test.go
+  h_78a442cba0b3e6 1-39
+manifest.yaml
+  h_78a442cba0b3e6 1-47
+manifest_contract_test.go
+  h_78a442cba0b3e6 1-64
+manifest_embed.go
+  h_78a442cba0b3e6 1-18
+manifest_test.go
+  h_78a442cba0b3e6 1-74
+release_version_test.go
+  h_78a442cba0b3e6 1-118
+release_workflow_test.go
+  h_78a442cba0b3e6 1-270
+request.go
+  h_78a442cba0b3e6 1-71
+request_test.go
+  h_78a442cba0b3e6 1-69
+result.go
+  h_78a442cba0b3e6 1-54
+scripts/run-conformance.sh
+  h_78a442cba0b3e6 1-7
+testhelpers_test.go
+  h_78a442cba0b3e6 1-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a9883f975c71f5d40058380770e51dcb2f7a28b",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
