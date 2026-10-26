@@ -1,0 +1,36 @@
+README.md
+  h_78a442cba0b3e6 53,55-62,105
+cmd/collector/main_test.go
+  h_78a442cba0b3e6 24-26,89-91,120-125,127-128
+collector.go
+  h_78a442cba0b3e6 34-37,40,42-43
+compatibility_test.go
+  h_78a442cba0b3e6 33-36
+doc.go
+  h_78a442cba0b3e6 11-14
+grant.example.json
+  h_78a442cba0b3e6 2-5
+grant/grant.go
+  h_78a442cba0b3e6 11,34
+grant_test.go
+  h_78a442cba0b3e6 30,32-36
+handler_test.go
+  h_78a442cba0b3e6 22-24,49,51,53-54
+loki/doc.go
+  h_78a442cba0b3e6 8-10
+manifest.yaml
+  h_78a442cba0b3e6 7,19-22,24-29,36-47
+manifest_contract_test.go
+  h_78a442cba0b3e6 14-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2b08078cdc2a8247894e71037b905fe91dd948f0",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
