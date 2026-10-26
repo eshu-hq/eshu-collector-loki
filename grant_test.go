@@ -27,16 +27,13 @@ type producerGrant struct {
 }
 
 // TestGrantExampleCoversEveryCoreKindAndNothingElse proves grant.example.json
-// is a superset of the producer grants the manifest needs.
+// carries exactly the emission-edge coverage the manifest needs.
 //
-// The manifest owns only the registry-scoped unique kind
-// (observability.observed_log_signal) since the eshu-hq/eshu#9202 arbiter
-// verdict: source_instance, observed_rule, and coverage_warning stay
-// grant-authorized at the emission edge but are not manifest-owned, so a
-// co-installed collector (tempo) no longer collides at install. The grants
-// must therefore cover every manifest kind, while extra grant-covered shared
-// kinds are allowed by design. Every grant kind must still sit inside
-// grant.CoveredKinds: nothing outside the emission-edge coverage is allowed.
+// The manifest owns the full four-kind emission since the eshu-hq/eshu#9202
+// arbiter verdict (satellite release v0.1.2). The grants must therefore
+// cover every manifest kind at the manifest's versions. Every grant kind
+// must still sit inside grant.CoveredKinds: nothing outside the
+// emission-edge coverage is allowed.
 // A grant's scope is a collector kind declared by the manifest, not a scope
 // ID: the host matches it against spec.collectorKinds. The observability
 // kinds are shared with the grafana, prometheus-mimir, and tempo collectors

@@ -31,12 +31,16 @@ const (
 )
 
 // FactKinds returns the fact kinds this collector manifest-owns, in manifest
-// order: only the registry-scoped unique kind (arbiter verdict
-// eshu-hq/eshu#9202). Shared-kind emission stays grant-authorized at the
-// emission edge via grant.CoveredKinds, not manifest-owned.
+// order: the full four-kind emission (arbiter verdict eshu-hq/eshu#9202,
+// satellite release v0.1.2). The emission edge still checks the
+// core-issued producer grant via grant.CoveredKinds before any provider
+// contact.
 func FactKinds() []string {
 	return []string{
+		loki.KindSourceInstance,
 		loki.KindObservedLogSignal,
+		loki.KindObservedRule,
+		loki.KindCoverageWarning,
 	}
 }
 

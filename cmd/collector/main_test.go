@@ -21,9 +21,9 @@ import (
 )
 
 // lokiStub serves a minimal Loki target: one label (so the run yields an
-// observed_log_signal fact the narrowed manifest owns), no series, no rules.
-// The handler still emits the grant-authorized source-instance fact
-// alongside it; contract validation below runs on the manifest-scoped copy.
+// observed_log_signal fact), no series, no rules. The run still emits the
+// source-instance fact alongside it; contract validation below runs on the
+// unfiltered result.
 func lokiStub(t *testing.T) *httptest.Server {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,28 +46,6 @@ func lokiStub(t *testing.T) *httptest.Server {
 	}))
 	t.Cleanup(server.Close)
 	return server
-}
-
-// scopeToManifest returns a copy of result holding only facts whose kind the
-// narrowed manifest owns (observability.observed_log_signal per
-// eshu-hq/eshu#9202). The handler still emits grant-authorized shared kinds
-// at the emission edge, but the manifest Contract declares only the owned
-// kind, so SDK validation runs on this scoped copy. Shared-kind shapes are
-// unchanged, proven by the untouched loki emission unit tests plus live QA
-// re-proof.
-func scopeToManifest(result sdk.Result) sdk.Result {
-	owned := make(map[string]struct{}, len(collector.Contract().Facts))
-	for _, declaration := range collector.Contract().Facts {
-		owned[declaration.Kind] = struct{}{}
-	}
-	kept := make([]sdk.Fact, 0, len(result.Facts))
-	for _, fact := range result.Facts {
-		if _, ok := owned[fact.Kind]; ok {
-			kept = append(kept, fact)
-		}
-	}
-	result.Facts = kept
-	return result
 }
 
 func requestJSON(t *testing.T, baseURL string) []byte {
@@ -108,9 +86,9 @@ func testDeps() deps {
 
 // TestRunServesOneRequestAsOneResult proves the stdin/stdout contract end to
 // end through the command: one Request in, one valid Result out, health on
-// standard error without the URL. The stub yields an observed_log_signal
-// fact; the manifest-scoped copy carries exactly that owned kind and passes
-// SDK validation (see scopeToManifest).
+// standard error without the URL. The stub yields observed_log_signal and
+// source_instance facts; the unfiltered result passes SDK validation against
+// the widened Contract (live re-proof stays pending, NOT_CHECKED here).
 func TestRunServesOneRequestAsOneResult(t *testing.T) {
 	t.Parallel()
 
@@ -139,12 +117,15 @@ func TestRunServesOneRequestAsOneResult(t *testing.T) {
 		if !foundOwned {
 			t.Fatalf("result facts %v, want an observability.observed_log_signal fact", result.Facts)
 		}
-		scoped := scopeToManifest(result)
-		if len(scoped.Facts) != 1 || scoped.Facts[0].Kind != "observability.observed_log_signal" {
-			t.Fatalf("scoped result = %v, want one observability.observed_log_signal", scoped.Facts)
+		byKind := map[string]int{}
+		for _, fact := range result.Facts {
+			byKind[fact.Kind]++
 		}
-		if _, err := sdk.NewValidator(collector.Contract()).ValidateResult(scoped); err != nil {
-			t.Fatalf("scoped result fails SDK validation: %v", err)
+		if byKind["observability.observed_log_signal"] == 0 || byKind["observability.source_instance"] == 0 {
+			t.Fatalf("result facts = %v, want observed_log_signal and source_instance facts", result.Facts)
+		}
+		if _, err := sdk.NewValidator(collector.Contract()).ValidateResult(result); err != nil {
+			t.Fatalf("unfiltered result fails SDK validation: %v", err)
 		}
 		if !strings.Contains(stderr.String(), "collector health:") {
 			t.Fatalf("stderr = %q, want a health line", stderr.String())

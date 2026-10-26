@@ -4,7 +4,7 @@ metadata:
   id: dev.eshu.collector.loki
   name: Loki collector
   publisher: eshu-hq
-  version: 0.1.1
+  version: 0.1.2
 spec:
   compatibleCore: ">=0.0.5 <0.2.0"
   componentType: collector
@@ -16,13 +16,31 @@ spec:
   artifacts:
     - platform: linux/amd64
       image: ghcr.io/eshu-hq/eshu-collector-loki@sha256:0000000000000000000000000000000000000000000000000000000000000000
-  # Ownership narrowed to the registry-scoped unique kind (eshu-hq/eshu#9202
-  # arbiter verdict): source_instance, observed_rule, and coverage_warning
-  # stay grant-authorized at the emission edge but are not manifest-owned,
-  # so a co-installed collector (tempo) no longer collides at install.
+  # Full emission (eshu-hq/eshu#9202 arbiter verdict, satellite release
+  # v0.1.2): the manifest owns all four observed kinds in emission order.
+  # The emission edge still checks the core-issued producer grant via
+  # grant.CoveredKinds before any provider contact.
   emittedFacts:
+    - kind: observability.source_instance
+      payloadSchemaRef: observability.source_instance
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
     - kind: observability.observed_log_signal
       payloadSchemaRef: observability.observed_log_signal
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: observability.observed_rule
+      payloadSchemaRef: observability.observed_rule
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: observability.coverage_warning
+      payloadSchemaRef: observability.coverage_warning
       schemaVersions:
         - 1.0.0
       sourceConfidence:

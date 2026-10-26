@@ -30,11 +30,10 @@ func TestCompatibilityMatrixSupportedPair(t *testing.T) {
 	if hostRejectsCoreRange(manifest.Spec.CompatibleCore, "0.1.0") {
 		t.Fatalf("pinned range %q must cover supported core 0.1.0", manifest.Spec.CompatibleCore)
 	}
-	// The handler still emits grant-authorized shared kinds, but conformance
-	// validates fixtures against the narrowed manifest Contract, so the
-	// fixture is scoped to manifest-declared kinds here. See
-	// scopeResultToManifest for the ownership note.
-	result := scopeResultToManifest(mustFixtureResult(t), manifest)
+	// The full four-kind emission (eshu-hq/eshu#9202 satellite release
+	// v0.1.2) is validated unfiltered against the widened manifest
+	// Contract; live re-proof stays pending (NOT_CHECKED here).
+	result := mustFixtureResult(t)
 	report := conformance.Run(conformance.Request{Manifest: manifest, Fixtures: []sdk.Result{result}, Mode: conformance.ModeFixture, PayloadSchemas: payloadSchemas(t, manifest)})
 	if !report.OK() {
 		t.Fatalf("supported pair findings = %#v, want passed", report.Findings)

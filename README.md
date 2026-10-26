@@ -50,16 +50,16 @@ explains the parity proof (or `loki/` tests where that file is absent).
 
 | Fact kind | Source | Manifest-owned |
 | --- | --- | --- |
-| `observability.source_instance` | One configured Loki target | No (grant-authorized) |
+| `observability.source_instance` | One configured Loki target | Yes |
 | `observability.observed_log_signal` | `GET /loki/api/v1/labels`, `/series` (+ label values) | Yes |
-| `observability.observed_rule` | `GET /loki/api/v1/rules` | No (grant-authorized) |
-| `observability.coverage_warning` | A bound, permission, capability, or truncation gap | No (grant-authorized) |
+| `observability.observed_rule` | `GET /loki/api/v1/rules` | Yes |
+| `observability.coverage_warning` | A bound, permission, capability, or truncation gap | Yes |
 
-The manifest owns only `observability.observed_log_signal`
-(eshu-hq/eshu#9202 arbiter verdict, so a co-installed tempo collector no
-longer collides at install). The other three kinds stay grant-authorized at
-the emission edge but are not manifest-owned. Every kind is schema `1.0.0`
-and source confidence `reported`. The program never persists log lines, raw
+The manifest owns the full four-kind emission (eshu-hq/eshu#9202 arbiter
+verdict, satellite release v0.1.2). The emission edge still checks the
+core-issued producer grant before any provider contact. Every kind is
+schema `1.0.0` and source confidence `reported`. Live re-proof of the
+widened emission stays pending. The program never persists log lines, raw
 LogQL, label values, tenant IDs, tenant headers, credentials, or provider
 response bodies.
 
@@ -102,7 +102,7 @@ The component lifecycle, using the `eshu` CLI against a component home:
 
 ```sh
 eshu component grant dev.eshu.collector.loki --component-home "$HOME_DIR" \
-  --version 0.1.1 --kind observability.source_instance --schema-version 1.0.0 \
+  --version 0.1.2 --kind observability.source_instance --schema-version 1.0.0 \
   --scope loki --expires-in 8760h        # repeat for each kind in grant.example.json
 eshu component install manifest.yaml --component-home "$HOME_DIR" \
   --trust-mode allowlist --allow-id dev.eshu.collector.loki --allow-publisher eshu-hq

@@ -8,7 +8,7 @@
 // component-producer-grants.md (#6709) and installed at cutover under the
 // #4047 gate. The draft terms live in PRODUCER_GRANT_DRAFT.md in
 // eshu-hq/eshu (go/internal/collector/observability/loki, #8860):
-// producer dev.eshu.collector.loki, version 0.1.1, scope loki, authority
+// producer dev.eshu.collector.loki, version 0.1.2, scope loki, authority
 // mode core_issued_grant, covering the four observed kinds at schema 1.0.0
 // with a bounded lifetime.
 //
@@ -31,7 +31,7 @@ const (
 	ProducerID = "dev.eshu.collector.loki"
 	// Version is the draft producer version. It must match
 	// metadata.version at admission.
-	Version = "0.1.1"
+	Version = "0.1.2"
 	// Scope must match the manifest-declared collector kind at admission.
 	Scope = "loki"
 	// SchemaVersionV1 is the schema version every covered kind carries.
