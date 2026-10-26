@@ -1,0 +1,62 @@
+.github/workflows/ci.yml
+  h_78a442cba0b3e6 1-19
+README.md
+  h_78a442cba0b3e6 1-123
+go.mod
+  h_78a442cba0b3e6 1-9
+go.sum
+  h_78a442cba0b3e6 1-18
+grant/grant.go
+  h_78a442cba0b3e6 1-152
+grant/grant_test.go
+  h_78a442cba0b3e6 1-86
+loki/claimid.go
+  h_78a442cba0b3e6 1-30
+loki/claimid_test.go
+  h_78a442cba0b3e6 1-23
+loki/client.go
+  h_78a442cba0b3e6 1-440
+loki/doc.go
+  h_78a442cba0b3e6 1-22
+loki/endpoint_operation_test.go
+  h_78a442cba0b3e6 1-49
+loki/envelope.go
+  h_78a442cba0b3e6 1-411
+loki/envelope_test.go
+  h_78a442cba0b3e6 1-181
+loki/extraction_prep_golden_test.go
+  h_78a442cba0b3e6 1-285
+loki/extraction_prep_mirror_test.go
+  h_78a442cba0b3e6 1-332
+loki/http_client_test.go
+  h_78a442cba0b3e6 1-363
+loki/metrics.go
+  h_78a442cba0b3e6 1-120
+loki/normalize.go
+  h_78a442cba0b3e6 1-197
+loki/redaction.go
+  h_78a442cba0b3e6 1-128
+loki/schema.go
+  h_78a442cba0b3e6 1-72
+loki/source.go
+  h_78a442cba0b3e6 1-292
+loki/source_collect_test.go
+  h_78a442cba0b3e6 1-416
+loki/testdata/8860-parity-loki.json
+  h_78a442cba0b3e6 1-102
+loki/truncation_test.go
+  h_78a442cba0b3e6 1-360
+loki/types.go
+  h_78a442cba0b3e6 1-265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2e372c0d70647f0e00cfc78d29dbf21c91d790a",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
