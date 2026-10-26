@@ -428,8 +428,11 @@ func (c HTTPClient) do(
 
 // rulesRetryStatus suppresses wasted retries for the ruler-backed rules
 // endpoint: a 502 there means the deployment has no ruler behind the
-// gateway, which no retry will fix. Every other status keeps the default
-// retry policy, and every other endpoint keeps it entirely.
+// gateway, which no retry will fix. This also covers transient gateway 502s
+// on the rules endpoint: they degrade without retry by design, and the
+// collection self-heals on the next poll with Partial coverage plus the
+// unsupported-rule warning as the signal. Every other status keeps the
+// default retry policy, and every other endpoint keeps it entirely.
 func rulesRetryStatus(statusCode int) bool {
 	if statusCode == http.StatusBadGateway {
 		return false
