@@ -18,8 +18,9 @@ spec:
       image: ghcr.io/eshu-hq/eshu-collector-loki@sha256:0000000000000000000000000000000000000000000000000000000000000000
   # Full emission (eshu-hq/eshu#9202 arbiter verdict, satellite release
   # v0.1.2): the manifest owns all four observed kinds in emission order.
-  # The emission edge still checks the core-issued producer grant via
-  # grant.CoveredKinds before any provider contact.
+  # Co-install with tempo needs a host with grant-aware sharing
+  # (eshu-hq/eshu#9202). The emission edge still checks the core-issued
+  # producer grant via grant.CoveredKinds before any provider contact.
   emittedFacts:
     - kind: observability.source_instance
       payloadSchemaRef: observability.source_instance

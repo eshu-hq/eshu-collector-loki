@@ -212,6 +212,11 @@ the tagged commit is on `main`, so tag only a commit that was merged there.
    `COLLECTOR_IMAGE_REF` (or `--image-ref`), which stamps it into the seeded
    manifest. No commit needs to carry the digest.
 
+Co-install prerequisite: v0.1.2 re-declares core-owned kinds shared with the
+tempo collector, so the host must install with grant-aware sharing
+(eshu-hq/eshu with the grant-sharing change for eshu-hq/eshu#9202). Do not
+seed v0.1.2 alongside tempo v0.1.3 on an older host image.
+
 The package must be **public**: the activation pulls it without a token. A
 new GHCR package starts private, so after the first release set its
 visibility to public in the package settings and re-run the job if the pull
