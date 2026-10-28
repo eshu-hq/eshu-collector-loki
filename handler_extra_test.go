@@ -92,3 +92,31 @@ func TestHandleNeverReturnsUnchanged(t *testing.T) {
 		t.Error("handler returned unchanged; it must always complete, warn, or fail the claim")
 	}
 }
+
+// TestHandlerGetenvDefaultsToProcessEnvironment proves a handler without an
+// injected Getenv reads the process environment, and that an injected
+// Getenv wins: ParseConfig resolves token and tenant variables through it.
+func TestHandlerGetenvDefaultsToProcessEnvironment(t *testing.T) {
+	// No t.Parallel: t.Setenv refuses parallel tests.
+	const key = "ESHU_LOKI_COLLECTOR_TEST_TOKEN"
+	t.Setenv(key, "process-env-token")
+	if got := (Handler{}).getenv(key); got != "process-env-token" {
+		t.Errorf("getenv(%q) = %q, want the process environment value", key, got)
+	}
+	if got := (Handler{Getenv: func(string) string { return "injected" }}).getenv(key); got != "injected" {
+		t.Errorf("getenv(%q) = %q, want the injected value to win", key, got)
+	}
+}
+
+// TestHandlerNowDefaultsToWallClock proves a handler without an injected
+// clock stamps claims with the wall time instead of the zero time.
+func TestHandlerNowDefaultsToWallClock(t *testing.T) {
+	t.Parallel()
+
+	before := time.Now()
+	got := (Handler{}).now()
+	after := time.Now()
+	if got.Before(before.Add(-time.Minute)) || got.After(after.Add(time.Minute)) {
+		t.Errorf("now() = %v, want approximately the wall clock", got)
+	}
+}

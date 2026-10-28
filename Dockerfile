@@ -1,4 +1,4 @@
-# Standalone Jira collector image: a static pure-Go binary, built reproducibly
+# Standalone Loki collector image: a static pure-Go binary, built reproducibly
 # with -trimpath, on a base with no shell and no package manager. The binary is
 # its own installer: `collector seed --dest DIR` writes DIR/collector (this
 # binary, mode 0755) and DIR/manifest.yaml, so an init container can seed the
@@ -9,7 +9,7 @@
 #   ... seed --dest /home --image-ref REPO@sha256:<digest>
 #       (or COLLECTOR_IMAGE_REF) also stamps the deployed digest into the
 #       seeded manifest; the image cannot embed its own digest.
-FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS build
+FROM golang:1.26.10-alpine@sha256:a2012b4a1d1f9f7e9f44e0d39b805a901e856b1dd80b4e6ee4338db547050308 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

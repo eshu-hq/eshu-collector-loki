@@ -21,7 +21,7 @@ const (
 	FailureClassConfigInvalid = "config_invalid"
 	// FailureClassCredentialMissing marks a token_env or tenant_id_env name
 	// that resolved no credential in the process environment.
-	FailureClassCredentialMissing = "credential_missing"
+	FailureClassCredentialMissing = "credential_missing" // #nosec G101 -- bounded failure-class identifier, not a credential; no secret material here
 	// FailureClassInvalidClaim marks a claim this collector cannot serve.
 	FailureClassInvalidClaim = "invalid_claim"
 	// FailureClassResultTooLarge marks a result that exceeds max_result_bytes.

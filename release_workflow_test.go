@@ -37,13 +37,41 @@ type workflowStep struct {
 	Run  string            `yaml:"run"`
 	With map[string]any    `yaml:"with"`
 	Env  map[string]string `yaml:"env"`
+	// If holds the step's `if:` condition; ContinueOnError holds
+	// `continue-on-error:`. Both default to the zero value when absent.
+	// The govulncheck/gosec reachability tests read them; other tests
+	// ignore them.
+	If              string `yaml:"if"`
+	ContinueOnError bool   `yaml:"continue-on-error"`
+}
+
+// needsList accepts the scalar (`needs: changes`) and sequence
+// (`needs: [a, b]`) forms GitHub allows.
+type needsList []string
+
+func (n *needsList) UnmarshalYAML(value *yaml.Node) error {
+	var single string
+	if err := value.Decode(&single); err == nil {
+		*n = []string{single}
+		return nil
+	}
+	var multi []string
+	if err := value.Decode(&multi); err != nil {
+		return err
+	}
+	*n = multi
+	return nil
 }
 
 type workflowFile struct {
 	On          map[string]any    `yaml:"on"`
 	Permissions map[string]string `yaml:"permissions"`
+	Concurrency map[string]any    `yaml:"concurrency"`
 	Jobs        map[string]struct {
+		Needs       needsList         `yaml:"needs"`
 		Permissions map[string]string `yaml:"permissions"`
+		Timeout     int               `yaml:"timeout-minutes"`
+		Env         map[string]string `yaml:"env"`
 		Steps       []workflowStep    `yaml:"steps"`
 	} `yaml:"jobs"`
 }
@@ -252,10 +280,10 @@ func TestReleaseWorkflowGateRejectsViolations(t *testing.T) {
           gh attestation verify`, "gh attestation verify", 1)
 		},
 		"version check dropped": func(s string) string {
-			return strings.Replace(s, "manifest.yaml", "other.yaml", -1)
+			return strings.ReplaceAll(s, "manifest.yaml", "other.yaml")
 		},
 		"version check runs after the push": func(s string) string {
-			return strings.Replace(s, "manifest.yaml", "other.yaml", -1) +
+			return strings.ReplaceAll(s, "manifest.yaml", "other.yaml") +
 				"      - name: Late version check\n        run: |\n          test \"${TAG_NAME}\" = \"v$(cat manifest.yaml)\" || exit 1\n"
 		},
 	} {

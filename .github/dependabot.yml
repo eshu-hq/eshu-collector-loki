@@ -1,0 +1,21 @@
+# Dependabot keeps the module and the pinned CI actions current.
+# Security-gate PRs (govulncheck, gosec) prove themselves in CI like any
+# other change; a failing gate is triaged in the open, never excluded.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
