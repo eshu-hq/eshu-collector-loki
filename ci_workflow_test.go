@@ -327,6 +327,25 @@ func TestGovulncheckLaneTriggersOnGoChanges(t *testing.T) {
 	}
 }
 
+// TestImageLaneRunsOnGoSources keeps the shipped artifact validated on
+// PRs that change what it embeds: the Dockerfile COPYs go.mod/go.sum,
+// COPYs the whole context (which keeps .go sources), and go-builds the
+// binary, so a Go-source or go.mod PR must select the image lane. A
+// go.mod toolchain bump past the pinned base would otherwise pass every
+// Go lane yet break docker build, surfacing only as post-merge red main.
+func TestImageLaneRunsOnGoSources(t *testing.T) {
+	t.Parallel()
+
+	workflow := readCIWorkflow(t)
+	job, ok := workflow.Jobs["image"]
+	if !ok {
+		t.Fatal("ci.yml has no image job")
+	}
+	if !strings.Contains(job.If, "needs.changes.outputs.go") {
+		t.Errorf("job image if = %q, want a go clause: Go sources ship in the image", job.If)
+	}
+}
+
 // TestGosecIssueStepIsReachable pins the gosec notification shape the same
 // way: the live text must pass, and a count step that stays green on
 // scheduled findings (or an ungated issue step) must fail.
