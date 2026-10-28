@@ -247,7 +247,7 @@ func TestReleaseWorkflowGateRejectsViolations(t *testing.T) {
 		},
 		"tag pattern widened": func(s string) string { return strings.Replace(s, `- "v*"`, `- "*"`, 1) },
 		"tag-pinned action": func(s string) string {
-			return strings.Replace(s, "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd", "actions/checkout@v5", 1)
+			return strings.Replace(s, "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", "actions/checkout@v5", 1)
 		},
 		"extra secret": func(s string) string { return s + "\n# ${{ secrets.DEPLOY_KEY }}\n" },
 		"extra permission": func(s string) string {
