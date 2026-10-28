@@ -39,9 +39,9 @@ race:
 	awk -v t="$$total" -v f="$(COVERAGE_FLOOR)" 'BEGIN { if (t + 0 < f + 0) { print "FAIL: coverage below floor"; exit 1 } }'
 
 # Keep this version equal to the rhysd/actionlint action pin in
-# .github/workflows/ci.yml (v1.7.9) so local and CI findings agree.
+# .github/workflows/ci.yml (v1.7.12) so local and CI findings agree.
 actionlint:
-	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.9 .github/workflows/*.yml
+	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 .github/workflows/*.yml
 
 tools-lint:
 	@if ! command -v golangci-lint >/dev/null; then \

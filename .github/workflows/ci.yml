@@ -325,10 +325,12 @@ jobs:
         # generics and exits non-zero even with zero findings; the finding
         # count below is the gate. Advisory until the false-positive rate
         # here is measured; triage happens in the open, never
-        # blanket-excluded. This repo: 2 sites triaged per-site
+        # blanket-excluded. This repo: 4 sites triaged per-site
         # (G101 false positive on the credential_missing failure-class
         # constant in config.go:24, G301 on the seed dest dir in
-        # cmd/collector/seed.go:121), count 0.
+        # cmd/collector/seed.go:121, G304 on the own-executable open in
+        # cmd/collector/seed.go:124 and the operator-chosen dest open in
+        # cmd/collector/seed.go:180), count 0.
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0
           "$(go env GOPATH)/bin/gosec" -no-fail -fmt=sarif -out=gosec.sarif ./...
