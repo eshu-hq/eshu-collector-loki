@@ -1,6 +1,6 @@
 [
-  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.source_instance", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked": false},
-  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.observed_log_signal", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked": false},
-  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.observed_rule", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked": false},
-  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.coverage_warning", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked": false}
+  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.source_instance", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked":  false},
+  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.observed_log_signal", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked":  false},
+  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.observed_rule", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked":  false},
+  {"producer_id": "dev.eshu.collector.loki", "version": "0.1.2", "kind": "observability.coverage_warning", "schema_versions": ["1.0.0"], "scope": "loki", "expires_at": "2027-09-01T00:00:00Z", "revoked":  false}
 ]
