@@ -37,3 +37,17 @@ func TestMonitorTracksSuccessFailureAndBoundedRetry(t *testing.T) {
 		t.Fatal("the ninth queued retry must exceed the bound")
 	}
 }
+
+// TestMonitorSetResourceReflectedInSnapshot proves SetResource replaces the
+// reported bound: the stderr health line carries the active mode's bound,
+// not just the default.
+func TestMonitorSetResourceReflectedInSnapshot(t *testing.T) {
+	t.Parallel()
+
+	monitor := NewMonitor()
+	monitor.SetResource(ResourceUse{MaxResultBytes: 1024})
+	_, resource := monitor.Snapshot()
+	if resource.MaxResultBytes != 1024 {
+		t.Errorf("resource after SetResource = %+v, want MaxResultBytes 1024", resource)
+	}
+}

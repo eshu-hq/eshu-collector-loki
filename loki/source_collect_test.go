@@ -25,19 +25,11 @@ func (c *stubEvidenceClient) CollectObservedMetadata(context.Context, TargetConf
 	return c.result, c.err
 }
 
-// testClaimSpec overrides one field of the default test claim.
+// testClaimSpec overrides fields of the default test claim.
 type testClaimSpec struct {
 	ScopeID      string
 	GenerationID string
 	FencingToken string
-}
-
-func defaultClaimSpec() testClaimSpec {
-	return testClaimSpec{
-		ScopeID:      "loki:tenant:prod",
-		GenerationID: "loki:generation-7",
-		FencingToken: "7",
-	}
 }
 
 func parityTestClaim(t *testing.T, spec testClaimSpec) collector.Claim {

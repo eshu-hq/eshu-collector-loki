@@ -250,6 +250,11 @@ go test -race -count=1 ./...
 docker build -t eshu-collector-loki:local .
 ```
 
+`make ci` runs the lint, test, and race lanes CI runs
+(`.github/workflows/ci.yml`; the `ci-complete` job aggregates the others),
+plus the conformance script. `scripts/run-conformance.sh` is the test
+lane body, so a breaking edit to it fails the `test` lane.
+
 ## Known limits
 
 - **A claim has a hard time bound.** The host sets the claim deadline to the
