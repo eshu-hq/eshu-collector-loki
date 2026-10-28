@@ -174,7 +174,10 @@ jobs:
 
   test:
     needs: [changes]
-    if: github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'
+    # shell edits trip this lane on purpose: the lane executes
+    # scripts/run-conformance.sh, so a script-only PR still runs the
+    # script and a mirror-breaking edit fails here, not just shellcheck.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.shell == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -182,10 +185,11 @@ jobs:
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
-      - name: build
-        run: go build ./...
-      - name: test
-        run: go test ./... -count=1
+      # The conformance script IS the test lane body (build, vet, race
+      # gate); `make ci` runs it too. Never re-inline these commands
+      # here: a second copy is a mirror that drifts.
+      - name: conformance
+        run: bash scripts/run-conformance.sh
 
   race:
     needs: [changes]

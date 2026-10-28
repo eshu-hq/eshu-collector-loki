@@ -342,3 +342,42 @@ func readCIWorkflow(t *testing.T) workflowFile {
 	}
 	return workflow
 }
+
+// conformanceScript is the single source of truth for the test lane body:
+// the test job must execute it, so a breaking edit fails the lane instead
+// of passing a shellcheck-only run.
+const conformanceScript = "scripts/run-conformance.sh"
+
+// testLaneRunsConformance reports whether any test-lane step executes the
+// conformance script.
+func testLaneRunsConformance(steps []workflowStep) bool {
+	for _, s := range steps {
+		if strings.Contains(s.Run, conformanceScript) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestTestLaneExecutesConformanceScript pins the orphan-script fix: the
+// test job must execute scripts/run-conformance.sh, and must trigger on
+// shell edits so a script-only PR trips the lane. The live ci.yml text
+// must pass; an inline-only lane must fail.
+func TestTestLaneExecutesConformanceScript(t *testing.T) {
+	t.Parallel()
+	workflow := readCIWorkflow(t)
+	job, ok := workflow.Jobs["test"]
+	if !ok {
+		t.Fatal("ci.yml has no test job")
+	}
+	if !testLaneRunsConformance(job.Steps) {
+		t.Errorf("test job never runs %s: a mirror-breaking edit passes CI", conformanceScript)
+	}
+	if !strings.Contains(job.If, "shell") {
+		t.Errorf("test job if = %q, want it to trigger on shell edits so a script-only change runs the lane", job.If)
+	}
+
+	if testLaneRunsConformance([]workflowStep{{Run: "go build ./...\ngo test ./... -count=1"}}) {
+		t.Errorf("inline-only lane: the gate accepted a test lane that never runs the conformance script")
+	}
+}

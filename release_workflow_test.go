@@ -73,6 +73,9 @@ type workflowFile struct {
 		Timeout     int               `yaml:"timeout-minutes"`
 		Env         map[string]string `yaml:"env"`
 		Steps       []workflowStep    `yaml:"steps"`
+		// If holds the job's `if:` condition. The conformance pin test
+		// reads it; other tests ignore it.
+		If string `yaml:"if"`
 	} `yaml:"jobs"`
 }
 

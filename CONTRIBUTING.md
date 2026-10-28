@@ -27,7 +27,9 @@ and may only rise). `make actionlint` mirrors the actionlint lane.
 `.github/workflows/ci.yml` runs a `changes` job first, so a PR only pays
 for lanes its paths can affect: Go sources run `lint`, `test`, `race`,
 `boundary`, and `gosec`; fixtures and embedded config run `test`;
-shell scripts run `shell`; `Dockerfile` and manifest changes run `image`;
+shell scripts run `shell` and `test` (the test lane executes
+`scripts/run-conformance.sh`); `Dockerfile` and manifest changes run
+`image`;
 dependency changes run `govulncheck`; workflow changes run `actionlint`
 plus the Go lanes. `ci-complete` is the only required check: it fails
 when a needed lane fails and passes when lanes were legitimately skipped
@@ -36,5 +38,5 @@ when a needed lane fails and passes when lanes were legitimately skipped
 Weekly, `govulncheck` and `gosec` (SARIF to the Security tab, advisory
 until its false-positive rate is measured) run on a schedule and file an
 issue on findings. Dependabot proposes weekly grouped `gomod` and
-`github-actions` bumps. `scripts/run-conformance.sh` runs the same
-build, vet, and race gate CI runs.
+`github-actions` bumps. `scripts/run-conformance.sh` is the test lane
+body in `.github/workflows/ci.yml`, and `make ci` runs it too.

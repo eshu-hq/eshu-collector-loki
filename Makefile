@@ -1,8 +1,9 @@
 # Local parity for CI: `make ci` runs the lint, test, and race lane
-# commands from .github/workflows/ci.yml. CI stays authoritative; this
-# target is the whole local contract (see README.md, "Build and test").
+# commands from .github/workflows/ci.yml, plus the conformance script
+# the CI test lane executes. CI stays authoritative; this target is the
+# whole local contract (see README.md, "Build and test").
 #
-#   make ci            # lint + test + race (with the coverage floor)
+#   make ci            # lint + test + race (with the coverage floor) + conformance script
 #   make lint          # vet, golangci-lint, gofumpt, tidy, 500-line cap
 #   make test          # build + full test suite
 #   make race          # race suite + coverprofile + coverage floor
@@ -14,6 +15,7 @@ COVERAGE_FLOOR ?= 90.1
 .PHONY: ci lint test race actionlint tools-lint
 
 ci: lint test race
+	bash scripts/run-conformance.sh
 
 lint: tools-lint
 	go vet ./...
@@ -36,8 +38,10 @@ race:
 	echo "total=$${total}% floor=$(COVERAGE_FLOOR)%"; \
 	awk -v t="$$total" -v f="$(COVERAGE_FLOOR)" 'BEGIN { if (t + 0 < f + 0) { print "FAIL: coverage below floor"; exit 1 } }'
 
+# Keep this version equal to the rhysd/actionlint action pin in
+# .github/workflows/ci.yml (v1.7.9) so local and CI findings agree.
 actionlint:
-	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 .github/workflows/*.yml
+	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.9 .github/workflows/*.yml
 
 tools-lint:
 	@if ! command -v golangci-lint >/dev/null; then \
