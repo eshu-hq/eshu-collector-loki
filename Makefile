@@ -43,3 +43,5 @@ tools-lint:
 	@if ! command -v golangci-lint >/dev/null; then \
 		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
 	fi
+
+# skip-proof: makefile-only lane check (comment only).
