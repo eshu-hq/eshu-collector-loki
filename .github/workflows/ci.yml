@@ -26,7 +26,8 @@
 #   golangci-lint v2.12.2 (same binary Eshu uses; config in .golangci.yml)
 #   govulncheck v1.9.0, run with -scan package (Go 1.26 SSA-safe)
 #   gosec v2.30.0, run with -no-fail; the SARIF finding count is advisory
-#   until its false-positive rate here is measured, then blocking
+#   on PRs until its false-positive rate here is measured, then blocking
+#   (follow-up #14); scheduled runs with findings already fail red
 
 name: ci
 
@@ -36,7 +37,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 6 * * 1" # weekly Monday 06:00 UTC: govulncheck + gosec only
+    - cron: "0 6 * * 1" # weekly Monday 06:00 UTC: every lane runs, like a push
   workflow_dispatch: # manual runs execute every lane, like a push
 
 permissions:
@@ -274,7 +275,9 @@ jobs:
 
   govulncheck:
     needs: [changes]
-    if: github.event_name != 'pull_request' || needs.changes.outputs.deps == 'true' || needs.changes.outputs.workflows == 'true'
+    # The go output matters: a Go-only change can newly reach a vulnerable
+    # symbol in an already-present dependency, so Go PRs scan too.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.deps == 'true' || needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

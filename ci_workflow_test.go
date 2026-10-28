@@ -294,6 +294,39 @@ func gosecReachabilityProblems(countRun string, issue workflowStep) []string {
 	return problems
 }
 
+// govulnTriggerProblems returns every way the govulncheck lane breaks its
+// trigger contract: a Go-only change can newly reach a vulnerable symbol in
+// an already-present dependency, so the lane must trigger on go edits as
+// well as dependency and workflow edits.
+func govulnTriggerProblems(cond string) []string {
+	var problems []string
+	for _, output := range []string{"outputs.go", "outputs.deps", "outputs.workflows"} {
+		if !strings.Contains(cond, output) {
+			problems = append(problems, "govulncheck lane if lacks "+output+" (a PR touching only those paths skips the scan)")
+		}
+	}
+	return problems
+}
+
+// TestGovulncheckLaneTriggersOnGoChanges pins the routing fix: the live
+// ci.yml text must pass, and a condition without the go output must fail
+// (a Go-only PR can newly reach a vulnerable symbol).
+func TestGovulncheckLaneTriggersOnGoChanges(t *testing.T) {
+	t.Parallel()
+	workflow := readCIWorkflow(t)
+	job, ok := workflow.Jobs["govulncheck"]
+	if !ok {
+		t.Fatal("ci.yml has no govulncheck job")
+	}
+	if problems := govulnTriggerProblems(job.If); len(problems) > 0 {
+		t.Errorf("govulncheck lane misses triggers:\n%s", strings.Join(problems, "\n"))
+	}
+
+	if len(govulnTriggerProblems("github.event_name != 'pull_request' || needs.changes.outputs.deps == 'true' || needs.changes.outputs.workflows == 'true'")) == 0 {
+		t.Errorf("go-less condition: the gate accepted a lane that never scans Go-only PRs")
+	}
+}
+
 // TestGosecIssueStepIsReachable pins the gosec notification shape the same
 // way: the live text must pass, and a count step that stays green on
 // scheduled findings (or an ungated issue step) must fail.
