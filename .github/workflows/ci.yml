@@ -12,16 +12,17 @@
 # manifest-digest or actionlint lanes. When a reusable version grows those
 # inputs, the move is a thin swap with no job-name churn.
 #
-# Pinned actions (SHAs resolved 2026-10-27 via git ls-remote; Dependabot
+# Pinned actions (SHAs synced 2026-10-28 with the uses: lines below;
+# re-verify with git ls-remote when auditing; Dependabot
 # github-actions proposes bumps, weekly grouped):
-#   actions/checkout v6.1.0              d23441a48e516b6c34aea4fa41551a30e30af803
-#   actions/setup-go v6.5.0              924ae3a1cded613372ab5595356fb5720e22ba16
+#   actions/checkout v7.0.1              3d3c42e5aac5ba805825da76410c181273ba90b1
+#   actions/setup-go v7.0.0              b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
 #   dorny/paths-filter v4                ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
-#   golangci/golangci-lint-action v9.3.0 d583c34f0599d37dbac4a198b9c83201be380893
+#   golangci/golangci-lint-action v9.3.0 ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
 #   actions/upload-artifact v7.0.2       cf430e030ddbb5b0abf93d22962f4752f3646cd9
-#   rhysd/actionlint v1.7.9              a443f344ff32813837fa49f7aa6cbc478d770e62
+#   rhysd/actionlint v1.7.12             914e7df21a07ef503a81201c76d2b11c789d3fca
 #   ludeeus/action-shellcheck (master)   00b27aa7cb85167568cb48a3838b75f4265f2bca
-#   github/codeql-action/upload-sarif v4.39.1 8498dc4c2b27cdd99baf0f87955b29ebbf30c78d
+#   github/codeql-action/upload-sarif v4.39.1 9b3254085494b55a0f7c4c2b3d2d52cc712ce370
 # Go tools (hash-verified by the toolchain on install):
 #   golangci-lint v2.12.2 (same binary Eshu uses; config in .golangci.yml)
 #   govulncheck v1.9.0, run with -scan package (Go 1.26 SSA-safe)
