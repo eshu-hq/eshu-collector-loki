@@ -1,13 +1,25 @@
 name: release
 
-# Publishes the collector image when a version tag is pushed. Nothing runs on a
-# pull request or a branch push, and nothing here deploys. A person copies the
-# digest from the job summary into the activation's seed.image (README,
-# "Releasing").
+# Publishes the collector image on every push to main and on every pushed
+# version tag. Nothing runs on a pull request, and nothing here deploys.
+# A version tag must match the manifest version: a v* tag for any other
+# version fails before anything is built or pushed (the workflow does not
+# check that the tagged commit is on main, so tag only a commit merged
+# there). A person copies the digest from the job summary into the
+# activation's seed.image (README, "Releasing").
+# Pushes to main publish the moving main, latest, and sha-<full-sha> tags
+# with the same provenance, signature, SBOM, and attestation hardening as
+# version-tag releases.
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+
+concurrency:
+  group: image-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -29,6 +41,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Require a semantic version tag
+        if: github.ref_type == 'tag'
         run: |
           if ! printf '%s' "${TAG_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
             echo "tag '${TAG_NAME}' is not vMAJOR.MINOR.PATCH[-prerelease]" >&2
@@ -39,6 +52,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Require the tag to match the manifest version
+        if: github.ref_type == 'tag'
         run: |
           version="$(awk '
             /^metadata:/ { in_metadata = 1; next }
@@ -68,13 +82,24 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract image metadata
-        id: meta
+      - name: Extract image metadata (tag events)
+        id: meta-tag
+        if: github.ref_type == 'tag'
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=tag
+      - name: Extract image metadata (main-branch pushes)
+        id: meta-branch
+        if: github.ref_type == 'branch'
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=main
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=long
       - name: Build and push the image
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -85,8 +110,12 @@ jobs:
           push: true
           provenance: false
           sbom: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ steps.meta-tag.outputs.tags }}
+            ${{ steps.meta-branch.outputs.tags }}
+          labels: |
+            ${{ steps.meta-tag.outputs.labels }}
+            ${{ steps.meta-branch.outputs.labels }}
       - name: Record the image digest
         env:
           DIGEST: ${{ steps.build.outputs.digest }}

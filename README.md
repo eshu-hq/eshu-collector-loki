@@ -189,10 +189,15 @@ image, so the stamp is provenance for the installed manifest.
 
 ## Releasing
 
-Only a pushed tag publishes an image. `.github/workflows/release.yml` runs on
-`v*` tags and nothing else, so pull requests and branch pushes publish
-nothing. It uses only the job's `GITHUB_TOKEN`, pins every action by commit
-SHA, and has no deploy step.
+`.github/workflows/release.yml` runs on every push to `main` and on every
+pushed tag `vMAJOR.MINOR.PATCH[-pre]`. Nothing runs on a pull request, and
+the workflow deploys nothing. It uses only the job's `GITHUB_TOKEN`, pins
+every action by commit SHA, and has no deploy step.
+
+A push to `main` publishes the moving `main`, `latest`, and
+`sha-<full-sha>` tags with the same signature and attestation hardening as a
+version release. Use a moving tag only where floating is intended; releases
+stay pinned to digests.
 
 Before the first tag, check the repository settings, because a workflow
 cannot enforce them. Any pushed `v*` tag publishes a public image, so
@@ -208,7 +213,8 @@ the tagged commit is on `main`, so tag only a commit that was merged there.
    manifest version in the same PR.
 2. Tag the merged commit and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The workflow builds `linux/amd64` only, pushes
-   `ghcr.io/eshu-hq/eshu-collector-loki:<tag>`, and writes the digest into
+   `ghcr.io/eshu-hq/eshu-collector-loki:<tag>` (or `:main`, `:latest`, and
+   `:sha-<full-sha>` for a `main` push), and writes the digest into
    the job summary. It signs the digest with cosign (keyless), attests SLSA
    build provenance, attests an SPDX SBOM, and verifies all three.
 4. Copy the digest from the job summary into the activation's `seed.image`
@@ -288,8 +294,8 @@ lane body, so a breaking edit to it fails the `test` lane.
 - `cmd/collector/` — the `collector` binary: stdio serving plus the `seed`
   subcommand the init container uses.
 - `Dockerfile`, `manifest.yaml`, `.github/workflows/` — the release
-  surface: reproducible image, component manifest, CI and tag-triggered
-  release.
+  surface: reproducible image, component manifest, CI and image-publish
+  release (`main` pushes and version tags).
 - `loki/` — the producer: bounded REST fetch (`client.go`,
   `normalize.go`), four envelope constructors (`envelope.go`),
   claim-to-Result fan-out (`source.go`), metadata-only redaction
