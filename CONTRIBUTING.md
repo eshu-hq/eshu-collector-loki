@@ -36,10 +36,12 @@ pinned `eshu-hq/.github` `go-collector-ci` reusable workflow as the
 on). Go sources run `lint`, `test`, `race`, `image` (the Dockerfile
 builds the binary from them), `boundary`, `govulncheck`, and `gosec`;
 fixtures and embedded config run `test`; shell scripts run `shell` and
-`test`; `Dockerfile` and manifest changes run `image`; dependency
+`conformance`; `Dockerfile` and manifest changes run `image`; dependency
 changes run `govulncheck`; workflow changes run `actionlint` plus the Go
-lanes. The `conformance` job runs `scripts/run-conformance.sh` under the
-same gate as `test`, so a script-only PR still executes the script.
+lanes. The `conformance` job runs `scripts/run-conformance.sh` on Go
+sources, shell changes, and the catch-alls (not on fixture-only changes,
+which the `test` lane covers), so a script-only PR still executes the
+script.
 `ci-complete` is the only required check: it fails when a needed job
 fails and passes when lanes were legitimately skipped (docs-only PRs).
 
