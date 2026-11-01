@@ -68,7 +68,11 @@ type workflowFile struct {
 	Permissions map[string]string `yaml:"permissions"`
 	Concurrency map[string]any    `yaml:"concurrency"`
 	Jobs        map[string]struct {
-		Needs       needsList         `yaml:"needs"`
+		Needs needsList `yaml:"needs"`
+		// Uses and With carry a job-level reusable-workflow call (the
+		// ci.yml lanes job); ordinary jobs leave them zero.
+		Uses        string            `yaml:"uses"`
+		With        map[string]any    `yaml:"with"`
 		Permissions map[string]string `yaml:"permissions"`
 		Timeout     int               `yaml:"timeout-minutes"`
 		Env         map[string]string `yaml:"env"`
