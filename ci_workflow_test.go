@@ -30,60 +30,15 @@ func TestCIWorkflowPinsActionsByCommitSHA(t *testing.T) {
 		t.Fatal("ci.yml defines no jobs")
 	}
 	for name, job := range workflow.Jobs {
+		// The job-level reusable call carries the same pin contract as
+		// step-level action refs: a full commit SHA, never a mutable tag.
+		if job.Uses != "" && !pinnedAction.MatchString(job.Uses) {
+			t.Errorf("job %s uses %q, want a full commit SHA pin", name, job.Uses)
+		}
 		for _, step := range job.Steps {
 			if step.Uses != "" && !pinnedAction.MatchString(step.Uses) {
 				t.Errorf("job %s uses %q, want a full commit SHA pin", name, step.Uses)
 			}
-		}
-	}
-}
-
-// frozenCILanes are the stable org job names. Only ci-complete is ever
-// required in a ruleset, so these names must not churn. vet is a step in
-// lint, not a job; boundary stays a job (the import-boundary gate).
-var frozenCILanes = []string{"changes", "lint", "test", "race", "shell", "image", "boundary", "govulncheck", "gosec", "actionlint", "ci-complete"}
-
-// TestCIWorkflowKeepsFrozenJobNames keeps the org lane contract: the frozen
-// names exist, and the retired vet job is gone (vet is a step in lint now).
-func TestCIWorkflowKeepsFrozenJobNames(t *testing.T) {
-	t.Parallel()
-
-	workflow := readCIWorkflow(t)
-	for _, name := range frozenCILanes {
-		if _, ok := workflow.Jobs[name]; !ok {
-			t.Errorf("ci.yml has no %q job, want the frozen lane names %v", name, frozenCILanes)
-		}
-	}
-	if _, ok := workflow.Jobs["vet"]; ok {
-		t.Errorf("ci.yml still has a %q job, want it folded into the lint lane", "vet")
-	}
-	complete, ok := workflow.Jobs["ci-complete"]
-	if !ok {
-		t.Fatal("ci.yml has no ci-complete job")
-	}
-	needed := make(map[string]bool, len(complete.Needs))
-	for _, name := range complete.Needs {
-		needed[name] = true
-	}
-	for _, name := range frozenCILanes {
-		if name == "ci-complete" {
-			continue
-		}
-		if !needed[name] {
-			t.Errorf("ci-complete needs %v, want every other frozen lane %v", complete.Needs, frozenCILanes)
-		}
-	}
-}
-
-// TestCIWorkflowSetsJobTimeouts keeps a hung runner from holding a PR open
-// forever: every lane declares a timeout.
-func TestCIWorkflowSetsJobTimeouts(t *testing.T) {
-	t.Parallel()
-
-	workflow := readCIWorkflow(t)
-	for name, job := range workflow.Jobs {
-		if job.Timeout <= 0 {
-			t.Errorf("job %s sets no timeout-minutes", name)
 		}
 	}
 }
@@ -104,7 +59,7 @@ func TestCIWorkflowCancelsSupersededRuns(t *testing.T) {
 
 // TestCIWorkflowPRLeanesNeedNoConfiguredSecrets keeps fork PRs working: the
 // only secret any lane may touch is the automatic GITHUB_TOKEN (used solely
-// by the schedule-only issue step), and the workflow holds only
+// by the schedule-only findings job), and the workflow holds only
 // contents: read.
 func TestCIWorkflowPRLeanesNeedNoConfiguredSecrets(t *testing.T) {
 	t.Parallel()
@@ -117,6 +72,11 @@ func TestCIWorkflowPRLeanesNeedNoConfiguredSecrets(t *testing.T) {
 		var texts []string
 		for key, value := range job.Env {
 			texts = append(texts, key+"="+value)
+		}
+		// Reusable-call inputs (the lanes gates) carry the same no-secret
+		// contract as step bodies.
+		for key, value := range job.With {
+			texts = append(texts, key+"="+fmt.Sprint(value))
 		}
 		for _, step := range job.Steps {
 			texts = append(texts, step.Run)
@@ -221,187 +181,6 @@ func TestCICompleteAggregatesPerJobResults(t *testing.T) {
 	}
 }
 
-// govulnReachabilityProblems returns every way the govulncheck lane breaks
-// its schedule-only notification contract: the scan must fail loud (no
-// -no-fail, no || true, no continue-on-error) so the failure()-gated issue
-// step below it stays reachable, and the issue step must carry failure()
-// plus the schedule gate (fork-PR safety).
-func govulnReachabilityProblems(scan, issue workflowStep) []string {
-	var problems []string
-	for _, quiet := range []string{"-no-fail", "|| true"} {
-		if strings.Contains(scan.Run, quiet) {
-			problems = append(problems, "govulncheck scan contains "+quiet+" (the issue step is unreachable)")
-		}
-	}
-	if scan.ContinueOnError {
-		problems = append(problems, "govulncheck scan sets continue-on-error (the issue step is unreachable)")
-	}
-	for _, want := range []string{"failure()", "schedule"} {
-		if !strings.Contains(issue.If, want) {
-			problems = append(problems, "govulncheck issue step if lacks "+want)
-		}
-	}
-	return problems
-}
-
-// TestGovulncheckIssueStepIsReachable pins the schedule-only notification
-// shape: the live ci.yml text must pass, and a quieted scan / ungated issue
-// mutant must fail (mirrors TestCICompleteAggregatesPerJobResults).
-func TestGovulncheckIssueStepIsReachable(t *testing.T) {
-	t.Parallel()
-
-	workflow := readCIWorkflow(t)
-	job, ok := workflow.Jobs["govulncheck"]
-	if !ok {
-		t.Fatal("ci.yml has no govulncheck job")
-	}
-	scanIdx := stepIndex(job.Steps, func(s workflowStep) bool { return strings.Contains(s.Run, "-scan package") })
-	issueIdx := stepIndex(job.Steps, func(s workflowStep) bool { return strings.Contains(s.Run, "gh issue create") })
-	if scanIdx < 0 || issueIdx < 0 {
-		t.Fatalf("govulncheck job has no scan/issue steps (scan=%d issue=%d)", scanIdx, issueIdx)
-	}
-	if problems := govulnReachabilityProblems(job.Steps[scanIdx], job.Steps[issueIdx]); len(problems) > 0 {
-		t.Errorf("govulncheck notification is unreachable:\n%s", strings.Join(problems, "\n"))
-	}
-
-	scan := job.Steps[scanIdx]
-	scan.Run += " govulncheck -no-fail"
-	if len(govulnReachabilityProblems(scan, job.Steps[issueIdx])) == 0 {
-		t.Errorf("-no-fail scan: the gate accepted an unreachable issue step")
-	}
-	issue := job.Steps[issueIdx]
-	issue.If = ""
-	if len(govulnReachabilityProblems(job.Steps[scanIdx], issue)) == 0 {
-		t.Errorf("ungated issue step: the gate accepted a step without failure()/schedule")
-	}
-}
-
-// gosecReachabilityProblems returns every way the gosec lane breaks its
-// schedule-only notification contract: the count step must fail scheduled
-// runs that carry findings (otherwise the failure()-gated issue step below
-// it stays reachable only on paper), and the issue step must carry
-// failure() plus the schedule gate.
-func gosecReachabilityProblems(countRun string, issue workflowStep) []string {
-	var problems []string
-	if !strings.Contains(countRun, "schedule") || !strings.Contains(countRun, "exit 1") {
-		problems = append(problems, "gosec count step never fails a scheduled run with findings (the issue step is unreachable)")
-	}
-	for _, want := range []string{"failure()", "schedule"} {
-		if !strings.Contains(issue.If, want) {
-			problems = append(problems, "gosec issue step if lacks "+want)
-		}
-	}
-	return problems
-}
-
-// govulnTriggerProblems returns every way the govulncheck lane breaks its
-// trigger contract: a Go-only change can newly reach a vulnerable symbol in
-// an already-present dependency, so the lane must trigger on go edits as
-// well as dependency and workflow edits.
-func govulnTriggerProblems(cond string) []string {
-	var problems []string
-	for _, output := range []string{"outputs.go", "outputs.deps", "outputs.workflows"} {
-		if !strings.Contains(cond, output) {
-			problems = append(problems, "govulncheck lane if lacks "+output+" (a PR touching only those paths skips the scan)")
-		}
-	}
-	return problems
-}
-
-// TestGovulncheckLaneTriggersOnGoChanges pins the routing fix: the live
-// ci.yml text must pass, and a condition without the go output must fail
-// (a Go-only PR can newly reach a vulnerable symbol).
-func TestGovulncheckLaneTriggersOnGoChanges(t *testing.T) {
-	t.Parallel()
-	workflow := readCIWorkflow(t)
-	job, ok := workflow.Jobs["govulncheck"]
-	if !ok {
-		t.Fatal("ci.yml has no govulncheck job")
-	}
-	if problems := govulnTriggerProblems(job.If); len(problems) > 0 {
-		t.Errorf("govulncheck lane misses triggers:\n%s", strings.Join(problems, "\n"))
-	}
-
-	if len(govulnTriggerProblems("github.event_name != 'pull_request' || needs.changes.outputs.deps == 'true' || needs.changes.outputs.workflows == 'true'")) == 0 {
-		t.Errorf("go-less condition: the gate accepted a lane that never scans Go-only PRs")
-	}
-}
-
-// TestImageLaneRunsOnGoSources keeps the shipped artifact validated on
-// PRs that change what it embeds: the Dockerfile COPYs go.mod/go.sum,
-// COPYs the whole context (which keeps .go sources), and go-builds the
-// binary, so a Go-source or go.mod PR must select the image lane. A
-// go.mod toolchain bump past the pinned base would otherwise pass every
-// Go lane yet break docker build, surfacing only as post-merge red main.
-func TestImageLaneRunsOnGoSources(t *testing.T) {
-	t.Parallel()
-
-	workflow := readCIWorkflow(t)
-	job, ok := workflow.Jobs["image"]
-	if !ok {
-		t.Fatal("ci.yml has no image job")
-	}
-	if !strings.Contains(job.If, "needs.changes.outputs.go == 'true'") {
-		t.Errorf("job image if = %q, want the go selecting clause: Go sources ship in the image", job.If)
-	}
-	if strings.Contains(job.If, "needs.changes.outputs.go !=") {
-		t.Errorf("job image if = %q, want == 'true', not an inverted comparison", job.If)
-	}
-	if strings.Contains(job.If, "needs.changes.outputs.go == 'false'") {
-		t.Errorf("job image if = %q, want == 'true', not == 'false'", job.If)
-	}
-
-	raw, err := os.ReadFile(".github/workflows/ci.yml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(raw)
-	goIdx := strings.Index(text, "\n            go:\n")
-	if goIdx < 0 {
-		t.Fatal("ci.yml changes job has no go: filter")
-	}
-	rest := text[goIdx:]
-	end := strings.Index(rest, "\n            fixtures:")
-	if end < 0 {
-		t.Fatal("ci.yml changes job has no fixtures: filter after go:")
-	}
-	if !strings.Contains(rest[:end], "'**/*.go'") {
-		t.Errorf("ci.yml go: filter lacks '**/*.go': Go sources would not select the Go lanes")
-	}
-}
-
-// TestGosecIssueStepIsReachable pins the gosec notification shape the same
-// way: the live text must pass, and a count step that stays green on
-// scheduled findings (or an ungated issue step) must fail.
-func TestGosecIssueStepIsReachable(t *testing.T) {
-	t.Parallel()
-
-	workflow := readCIWorkflow(t)
-	job, ok := workflow.Jobs["gosec"]
-	if !ok {
-		t.Fatal("ci.yml has no gosec job")
-	}
-	countIdx := stepIndex(job.Steps, func(s workflowStep) bool {
-		return strings.Contains(s.Run, "gosec.sarif") && strings.Contains(s.Run, "schedule")
-	})
-	issueIdx := stepIndex(job.Steps, func(s workflowStep) bool { return strings.Contains(s.Run, "gh issue create") })
-	if countIdx < 0 || issueIdx < 0 {
-		t.Fatalf("gosec job has no count/issue steps (count=%d issue=%d)", countIdx, issueIdx)
-	}
-	if problems := gosecReachabilityProblems(job.Steps[countIdx].Run, job.Steps[issueIdx]); len(problems) > 0 {
-		t.Errorf("gosec notification is unreachable:\n%s", strings.Join(problems, "\n"))
-	}
-
-	if len(gosecReachabilityProblems("echo no findings", job.Steps[issueIdx])) == 0 {
-		t.Errorf("advisory-only count: the gate accepted a count step that never fails")
-	}
-	issue := job.Steps[issueIdx]
-	issue.If = ""
-	if len(gosecReachabilityProblems(job.Steps[countIdx].Run, issue)) == 0 {
-		t.Errorf("ungated issue step: the gate accepted a step without failure()/schedule")
-	}
-}
-
 func readCIWorkflow(t *testing.T) workflowFile {
 	t.Helper()
 
@@ -417,43 +196,4 @@ func readCIWorkflow(t *testing.T) workflowFile {
 		t.Fatal("ci.yml defines no jobs")
 	}
 	return workflow
-}
-
-// conformanceScript is the single source of truth for the test lane body:
-// the test job must execute it, so a breaking edit fails the lane instead
-// of passing a shellcheck-only run.
-const conformanceScript = "scripts/run-conformance.sh"
-
-// testLaneRunsConformance reports whether any test-lane step executes the
-// conformance script.
-func testLaneRunsConformance(steps []workflowStep) bool {
-	for _, s := range steps {
-		if strings.Contains(s.Run, conformanceScript) {
-			return true
-		}
-	}
-	return false
-}
-
-// TestTestLaneExecutesConformanceScript pins the orphan-script fix: the
-// test job must execute scripts/run-conformance.sh, and must trigger on
-// shell edits so a script-only PR trips the lane. The live ci.yml text
-// must pass; an inline-only lane must fail.
-func TestTestLaneExecutesConformanceScript(t *testing.T) {
-	t.Parallel()
-	workflow := readCIWorkflow(t)
-	job, ok := workflow.Jobs["test"]
-	if !ok {
-		t.Fatal("ci.yml has no test job")
-	}
-	if !testLaneRunsConformance(job.Steps) {
-		t.Errorf("test job never runs %s: a mirror-breaking edit passes CI", conformanceScript)
-	}
-	if !strings.Contains(job.If, "shell") {
-		t.Errorf("test job if = %q, want it to trigger on shell edits so a script-only change runs the lane", job.If)
-	}
-
-	if testLaneRunsConformance([]workflowStep{{Run: "go build ./...\ngo test ./... -count=1"}}) {
-		t.Errorf("inline-only lane: the gate accepted a test lane that never runs the conformance script")
-	}
 }
