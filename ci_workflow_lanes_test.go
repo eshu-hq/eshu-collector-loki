@@ -30,8 +30,11 @@ var callerJobs = []string{"changes", "lanes", "conformance", "scheduled-findings
 // dark (or widen) unnoticed.
 const (
 	gateGoMisc = "github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'"
-	gateTest   = "github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.shell == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'"
-	gateImage  = "github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'"
+	gateTest   = "github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'"
+	// gateConformance runs the conformance script: Go sources, the script
+	// itself (shell), and the catch-alls. Fixtures stay with the test lane.
+	gateConformance = "github.event_name != 'pull_request' || needs.changes.outputs.go == 'true' || needs.changes.outputs.shell == 'true' || needs.changes.outputs.misc == 'true' || needs.changes.outputs.workflows == 'true'"
+	gateImage       = "github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true'"
 )
 
 func gate(expr string) string { return "${{ " + expr + " }}" }
@@ -281,9 +284,10 @@ func TestImageGateRunsOnGoSources(t *testing.T) {
 
 // TestConformanceJobRunsScript keeps scripts/run-conformance.sh executed in
 // CI: the reusable test lane runs plain build+test and cannot run the
-// script, so a caller job does, under the retired test-lane gate (shell
-// edits trip it, so a script-only PR still runs the script and a
-// mirror-breaking edit fails here, not just shellcheck).
+// script, so a caller job does. Shell edits trip it (so a script-only PR
+// still runs the script and a mirror-breaking edit fails here, not just
+// shellcheck); fixture-only edits do not, because the test lane already
+// runs the same go test over them.
 func TestConformanceJobRunsScript(t *testing.T) {
 	t.Parallel()
 
@@ -292,8 +296,8 @@ func TestConformanceJobRunsScript(t *testing.T) {
 	if !ok {
 		t.Fatal("ci.yml has no conformance job")
 	}
-	if job.If != gate(gateTest) {
-		t.Errorf("conformance if = %q, want the retired test-lane gate %q", job.If, gate(gateTest))
+	if job.If != gate(gateConformance) {
+		t.Errorf("conformance if = %q, want the conformance gate %q", job.If, gate(gateConformance))
 	}
 	ran := false
 	for _, step := range job.Steps {
