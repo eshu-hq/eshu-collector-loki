@@ -22,6 +22,11 @@ make ci   # lint + test + race, the whole local contract
 also enforces the statement-coverage floor (`COVERAGE_FLOOR`, at 90.1%
 and may only rise). `make actionlint` mirrors the actionlint lane.
 
+`bash scripts/loki-seed-matrix.sh` is a local runner (not a CI gate) that plants a
+seeded defect for each of vet, lint, format, race, tidy, the 500-line cap, and the
+coverage floor, asserts the lane turns red and names the seed, then asserts green
+after removal and leaves the tree as it found it.
+
 ## CI lanes
 
 `.github/workflows/ci.yml` is a thin caller. It runs a `changes` job
