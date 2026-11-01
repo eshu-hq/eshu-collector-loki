@@ -391,3 +391,5 @@ This repository mirrors that layout file for file (`doc.go`, `types.go`,
   `eshu-collector-pagerduty` (same SDK pins) for the release gates and
   `eshu-collector-jira` for `release.yml`/`ci.yml`. Packaging and deployment
   stay host-owned past the image.
+
+<!-- lane-selection proof, do not merge -->
