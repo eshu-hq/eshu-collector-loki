@@ -1,6 +1,6 @@
 # Local parity for CI: `make ci` runs the lint, test, and race lane
-# commands from .github/workflows/ci.yml, plus the conformance script
-# the CI test lane executes. CI stays authoritative; this target is the
+# commands the shared reusable workflow runs for .github/workflows/ci.yml,
+# plus the conformance script the CI conformance job executes. CI stays authoritative; this target is the
 # whole local contract (see README.md, "Build and test").
 #
 #   make ci            # lint + test + race (with the coverage floor) + conformance script
@@ -38,8 +38,8 @@ race:
 	echo "total=$${total}% floor=$(COVERAGE_FLOOR)%"; \
 	awk -v t="$$total" -v f="$(COVERAGE_FLOOR)" 'BEGIN { if (t + 0 < f + 0) { print "FAIL: coverage below floor"; exit 1 } }'
 
-# Keep this version equal to the rhysd/actionlint action pin in
-# .github/workflows/ci.yml (v1.7.12) so local and CI findings agree.
+# Keep this version equal to the actionlint-version input of the lanes job
+# in .github/workflows/ci.yml (1.7.12) so local and CI findings agree.
 actionlint:
 	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 .github/workflows/*.yml
 

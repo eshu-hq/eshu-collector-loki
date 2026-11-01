@@ -257,9 +257,10 @@ docker build -t eshu-collector-loki:local .
 ```
 
 `make ci` runs the lint, test, and race lanes CI runs
-(`.github/workflows/ci.yml`; the `ci-complete` job aggregates the others),
-plus the conformance script. `scripts/run-conformance.sh` is the test
-lane body, so a breaking edit to it fails the `test` lane.
+(`.github/workflows/ci.yml`, a thin caller of the shared `go-collector-ci`
+reusable workflow; the `ci-complete` job aggregates the lanes), plus the
+conformance script. `scripts/run-conformance.sh` is the body of the
+`conformance` CI job, so a breaking edit to it fails that job.
 
 ## Known limits
 

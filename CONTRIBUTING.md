@@ -24,20 +24,24 @@ and may only rise). `make actionlint` mirrors the actionlint lane.
 
 ## CI lanes
 
-`.github/workflows/ci.yml` runs a `changes` job first, so a PR only pays
-for lanes its paths can affect: Go sources run `lint`, `test`, `race`,
-`image` (the Dockerfile builds the binary from them), `boundary`,
-`govulncheck`, and `gosec`; fixtures and embedded config run `test`;
-shell scripts run `shell` and `test` (the test lane executes
-`scripts/run-conformance.sh`); `Dockerfile` and manifest changes run
-`image`;
-dependency changes run `govulncheck`; workflow changes run `actionlint`
-plus the Go lanes. `ci-complete` is the only required check: it fails
-when a needed lane fails and passes when lanes were legitimately skipped
-(docs-only PRs).
+`.github/workflows/ci.yml` is a thin caller. It runs a `changes` job
+first, so a PR only pays for lanes its paths can affect, then calls the
+pinned `eshu-hq/.github` `go-collector-ci` reusable workflow as the
+`lanes` job (lane checks nest as `lanes / lint`, `lanes / test`, and so
+on). Go sources run `lint`, `test`, `race`, `image` (the Dockerfile
+builds the binary from them), `boundary`, `govulncheck`, and `gosec`;
+fixtures and embedded config run `test`; shell scripts run `shell` and
+`test`; `Dockerfile` and manifest changes run `image`; dependency
+changes run `govulncheck`; workflow changes run `actionlint` plus the Go
+lanes. The `conformance` job runs `scripts/run-conformance.sh` under the
+same gate as `test`, so a script-only PR still executes the script.
+`ci-complete` is the only required check: it fails when a needed job
+fails and passes when lanes were legitimately skipped (docs-only PRs).
 
-Weekly, `govulncheck` and `gosec` (SARIF to the Security tab, advisory
-until its false-positive rate is measured) run on a schedule and file an
-issue on findings. Dependabot proposes weekly grouped `gomod` and
-`github-actions` bumps. `scripts/run-conformance.sh` is the test lane
-body in `.github/workflows/ci.yml`, and `make ci` runs it too.
+Weekly, `govulncheck` and `gosec` run on a schedule. Scheduled findings
+fail the run and the `scheduled-findings` job files or updates one
+combined issue. `gosec` stays advisory on PRs until its false-positive
+rate is measured (issue #14); its SARIF reaches the Security tab through
+the `gosec-sarif` job on non-PR runs. Dependabot proposes weekly grouped
+`gomod` and `github-actions` bumps. `make ci` runs the conformance script
+too.
