@@ -2,11 +2,10 @@ name: release
 
 # Publishes the collector image on every push to main and on every pushed
 # version tag. Nothing runs on a pull request, and nothing here deploys.
-# A version tag must match the manifest version: a v* tag for any other
-# version fails before anything is built or pushed (the workflow does not
-# check that the tagged commit is on main, so tag only a commit merged
-# there). A person copies the digest from the job summary into the
-# activation's seed.image (README, "Releasing").
+# A version tag must point at the protected main head and match the manifest
+# version: a v* tag cut from any other commit, or for any other version,
+# fails before anything is built or pushed. A person copies the digest from
+# the job summary into the activation's seed.image (README, "Releasing").
 # Pushes to main publish the moving main, latest, and sha-<full-sha> tags
 # with the same provenance, signature, SBOM, and attestation hardening as
 # version-tag releases.
@@ -51,6 +50,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Require the tag to point at the protected main head
+        if: github.ref_type == 'tag'
+        env:
+          TAG_COMMIT: ${{ github.sha }}
+        run: |
+          git fetch origin main --quiet
+          main_head="$(git rev-parse origin/main)"
+          if [[ "${TAG_COMMIT}" != "${main_head}" ]]; then
+            echo "tag '${TAG_NAME}' points at ${TAG_COMMIT}, not the protected main head ${main_head}" >&2
+            exit 1
+          fi
       - name: Require the tag to match the manifest version
         if: github.ref_type == 'tag'
         run: |
