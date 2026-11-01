@@ -202,8 +202,9 @@ stay pinned to digests.
 Before the first tag, check the repository settings, because a workflow
 cannot enforce them. Any pushed `v*` tag publishes a public image, so
 restrict `v*` tag creation to maintainers (a repository ruleset for tags).
-The workflow checks the tag against `manifest.yaml` but does not check that
-the tagged commit is on `main`, so tag only a commit that was merged there.
+The workflow checks the tag against `manifest.yaml` and refuses to publish a
+version release unless the tag points at the protected `main` head, so a
+`v*` tag cut from any other commit publishes nothing.
 
 1. Merge the change to `main`. The tag must match `metadata.version` in
    `manifest.yaml` (`v0.1.0` for version `0.1.0`; a `-rc1` style suffix is
@@ -211,7 +212,7 @@ the tagged commit is on `main`, so tag only a commit that was merged there.
    `vMAJOR.MINOR.PATCH` with an optional `-prerelease` suffix, so a tag such
    as `v0.1.0-` or `v0.1.0-rc/a` fails before anything is built. Bump the
    manifest version in the same PR.
-2. Tag the merged commit and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
+2. Tag the merged `main` head and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The workflow builds `linux/amd64` only, pushes
    `ghcr.io/eshu-hq/eshu-collector-loki:<tag>` (or `:main`, `:latest`, and
    `:sha-<full-sha>` for a `main` push), and writes the digest into
