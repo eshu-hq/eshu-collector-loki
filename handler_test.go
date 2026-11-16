@@ -6,6 +6,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +32,7 @@ func TestHandleServesACompleteResult(t *testing.T) {
 	if result.State != sdk.ResultComplete {
 		t.Fatalf("state = %q, want complete", result.State)
 	}
-	if result.Claim != testClaim() {
+	if !reflect.DeepEqual(result.Claim, testClaim()) {
 		t.Fatalf("claim = %+v, want the request claim echoed", result.Claim)
 	}
 	byKind := factsByKind(result)
